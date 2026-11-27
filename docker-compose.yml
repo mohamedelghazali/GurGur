@@ -1,0 +1,29 @@
+services:
+  gurgur:
+    build: .
+    restart: unless-stopped
+    init: true
+    environment:
+      LAB_API_KEY: ${LAB_API_KEY:?Set LAB_API_KEY in the shell or .env file}
+      LAB_DATABASE_PATH: /app/data/gurgur.sqlite3
+      LAB_CONTAINER_MODE: "1"
+      LAB_CONTAINER_BIND_ACK: "127.0.0.1"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - gurgur-data:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 128
+    ulimits:
+      core:
+        soft: 0
+        hard: 0
+
+volumes:
+  gurgur-data:

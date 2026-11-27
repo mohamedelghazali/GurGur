@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>GurGur — Network Research & Defense Lab</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header><div class="brand"><div class="mark">N</div><div><strong>GURGUR DEFENSE</strong><small>CONTROLLED RESEARCH ENVIRONMENT</small></div></div><div class="status" id="systemStatus">● LOCAL CONTROL PLANE</div></header>
+<main class="wrap">
+  <div class="intro"><div><div class="eyebrow">Network assurance / 0.1.0</div><h1>Measure the signal.<br>Strengthen the defense.</h1><p>A bounded research console for authorized private-network measurements, run telemetry, and auditable experiment records.</p></div><div class="tokenrow"><input id="apiKey" type="password" autocomplete="off" placeholder="API bearer key" aria-label="API bearer key"><button class="btn secondary" id="saveKey">Unlock</button></div></div>
+  <div class="notice">SAFETY PROFILE: loopback and RFC1918 IPv4 targets only · 10 requests/sec maximum · 30 seconds maximum · 5 concurrent requests · no proxies, spoofing, redirects, or public Internet targets.</div>
+  <section class="grid">
+    <div class="panel"><h2>01 / Register a lab target <span>private network only</span></h2>
+      <form id="targetForm">
+        <label for="targetName">TARGET LABEL</label><input id="targetName" required minlength="2" maxlength="60" placeholder="Local web service">
+        <div class="row"><div><label for="targetIp">IPv4 ADDRESS</label><input id="targetIp" required value="127.0.0.1" placeholder="127.0.0.1"></div><div><label for="targetPort">PORT</label><input id="targetPort" type="number" min="1024" max="65535" value="8081" required></div></div>
+        <label for="targetScheme">SCHEME</label><select id="targetScheme"><option value="http">HTTP (local lab)</option><option value="https">HTTPS (certificate validation enabled)</option></select>
+        <button class="btn" type="submit">Register target</button>
+      </form>
+      <div class="hint">Only register a service you own or are explicitly authorized to measure. The server validates the address again before every run.</div>
+    </div>
+    <div class="panel"><h2>02 / Configure a measurement <span>strict ceilings</span></h2>
+      <form id="runForm">
+        <label for="targetSelect">REGISTERED TARGET</label><select id="targetSelect" required><option value="">Register a target first</option></select>
+        <div class="row"><div><label for="rps">REQUESTS / SEC</label><input id="rps" type="number" min="1" max="10" value="2"></div><div><label for="duration">DURATION / SEC</label><input id="duration" type="number" min="1" max="30" value="5"></div></div>
+        <label for="concurrency">MAX CONCURRENCY</label><input id="concurrency" type="number" min="1" max="5" value="2">
+        <button class="btn" id="startButton" type="submit">Start bounded run</button><button class="btn danger" id="stopButton" type="button" disabled>Stop active run</button>
+      </form><div class="hint" id="budgetHint">Request budget: 10 total · fixed GET / · response read capped at 16 KiB per request.</div>
+    </div>
+    <div class="panel wide"><div class="runbar"><h2>03 / Live telemetry <span>latest experiment</span></h2><span class="pill" id="runStatus">IDLE</span></div>
+      <div class="metrics">
+        <div class="metric"><small>Requests started</small><strong id="mStarted">0</strong><em>bounded total</em></div>
+        <div class="metric"><small>Successful</small><strong id="mSuccess">0</strong><em>HTTP 2xx / 3xx</em></div>
+        <div class="metric"><small>Actual rate</small><strong id="mRate">0.0</strong><em>requests / sec</em></div>
+        <div class="metric"><small>Median latency</small><strong id="mLatency">—</strong><em>milliseconds</em></div>
+      </div><div class="row"><div class="metric"><small>HTTP errors / timeouts</small><strong id="mErrors">0</strong></div><div class="metric"><small>p95 latency</small><strong id="mP95">—</strong></div></div>
+      <div class="feed" id="eventFeed"><div class="empty">Unlock with your API key, register a private target, then start a measurement.</div></div>
+    </div>
+    <div class="panel"><h2>04 / Recent experiments</h2><div id="runHistory" class="empty">No recorded runs yet.</div></div>
+    <div class="panel"><h2>05 / Audit integrity</h2><div class="audit" id="auditStatus">Awaiting authenticated verification.</div><button class="btn secondary" id="verifyAudit" type="button">Verify audit chain</button></div>
+  </section>
+  <div class="foot"><span>GURGUR · LOCAL-FIRST · RESEARCH BUILD 0.1.0</span><span>NO PUBLIC TARGETING · NO TRAFFIC AMPLIFICATION · AUDIT TRAIL ENABLED</span></div>
+</main>
+<script src="/static/app.js" defer></script>
+</body>
+</html>

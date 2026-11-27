@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "project": "gurgur",
+  "verification_timestamp_utc": "2026-11-27T21:52:24Z",
+  "repository": {
+    "git_repository_present": false,
+    "commit_sha": null,
+    "evidence_binding": "NOT_BOUND_TO_COMMIT"
+  },
+  "runtime": {
+    "python": "3.13.5",
+    "fastapi": "0.128.2",
+    "httpx": "0.28.1",
+    "pydantic": "2.13.5",
+    "uvicorn": "0.48.0",
+    "pytest": "9.0.2"
+  },
+  "automated_tests": {
+    "command": "LAB_API_KEY=<32+ chars> LAB_DATABASE_PATH=/tmp/gurgur-dev-import.sqlite3 pytest -q --cov=app --cov-report=term-missing",
+    "runner": "pytest",
+    "result": "PASS",
+    "passed": 34,
+    "failed": 0,
+    "skipped": 0,
+    "application_line_coverage_percent": 87.0
+  },
+  "additional_checks": [
+    {
+      "check": "python -m compileall -q app tests",
+      "result": "PASS"
+    },
+    {
+      "check": "live uvicorn smoke: GET /health",
+      "result": "PASS",
+      "http_status": 200
+    },
+    {
+      "check": "live uvicorn smoke: GET / dashboard",
+      "result": "PASS",
+      "http_status": 200
+    },
+    {
+      "check": "live uvicorn smoke: GET /static/app.js",
+      "result": "PASS",
+      "http_status": 200
+    },
+    {
+      "check": "live uvicorn smoke: unauthenticated GET /api/v1/targets",
+      "result": "PASS",
+      "http_status": 401
+    },
+    {
+      "check": "live uvicorn smoke: bearer-authenticated GET /api/v1/targets",
+      "result": "PASS",
+      "http_status": 200
+    },
+    {
+      "check": "AIGENT-SEC upstream preflight v1.2.0",
+      "result": "PASS",
+      "pinned_commit": "e181de2e52cf1ac9ff2300da287c16ac68186e44",
+      "active_policy_paths_verified": 175,
+      "policy_files_read": 73,
+      "domains": [
+        "networking",
+        "api",
+        "platform",
+        "containers",
+        "supply_chain",
+        "observability",
+        "testing",
+        "privacy",
+        "application_security",
+        "development",
+        "owasp_web",
+        "governance",
+        "infrastructure",
+        "threat_intel"
+      ],
+      "limitation": "Upstream policy integrity and availability only; not an application security certification."
+    },
+    {
+      "check": "AIGENT-SEC secret-scanner heuristic review of workspace",
+      "result": "PASS",
+      "detail": "No supported secret patterns detected; scanner is heuristic and not exhaustive."
+    },
+    {
+      "check": "AIGENT-SEC secure-review heuristic review of workspace",
+      "result": "PASS",
+      "detail": "No supported high/medium patterns detected; scanner is heuristic and not a complete SAST audit."
+    }
+  ],
+  "unavailable_or_not_run": [
+    "GENCODE-GOV local CLI validation, complete rule assessment, independent audit, and evidence-signing workflow: NOT RUN; no installed CLI or external verifier evidence for this workspace.",
+    "AIGENT-SEC full application security audit and independent human review: NOT RUN; upstream preflight and two heuristic checks do not constitute a full audit.",
+    "Ruff, Bandit, and pip-audit: NOT RUN locally; dependency vulnerability/license review remains NOT VERIFIED. A pip-audit job is configured in GitHub Actions but has not run on GitHub yet.",
+    "Docker build / Compose validation: NOT RUN; Docker CLI unavailable in this environment.",
+    "SBOM generation, artifact signing, production deployment, TLS termination, remote access review, backup/restore drill: NOT VERIFIED."
+  ],
+  "governance_gate": {
+    "status": "BLOCKED",
+    "reason": "Local functional and bounded live smoke tests pass and AIGENT-SEC upstream preflight passes, but tests are not yet bound to a Git commit, and independent application security review, full GENCODE-GOV assessment, dependency audit, container validation, and production readiness evidence are incomplete."
+  },
+  "scope_note": "The reported test result is for the current workspace snapshot and will remain unbound until published and evidence is updated against a commit. It does not assert that every security rule passed or that the application is production-ready."
+}

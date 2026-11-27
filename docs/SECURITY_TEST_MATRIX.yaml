@@ -1,0 +1,87 @@
+version: 1
+project: gurgur
+status_note: "Runner observations describe this uncommitted workspace snapshot. Governance status remains NOT_VERIFIED until evidence is bound to a Git commit and independently assessed."
+scenarios:
+  - id: SE-SEC-001-authentication
+    scenario: unauthenticated_and_invalid_bearer_access
+    disposition: applicable
+    test: tests/test_api.py::test_api_requires_bearer_key
+    observed_test_result: PASS
+    governance_status: NOT_VERIFIED
+  - id: SE-SEC-002-ownership
+    scenario: unknown_run_identifier_access
+    disposition: partial
+    test: tests/test_api.py::test_unknown_run_id_is_not_disclosed
+    observed_test_result: PASS
+    governance_status: NOT_VERIFIED
+    note: "Single-operator profile; per-user and tenant ownership are not implemented."
+  - id: SE-SEC-003-input
+    scenario: hostile_label_and_invalid_payload
+    disposition: applicable
+    test: tests/test_api.py::test_target_label_validation_rejects_markup_and_sql_fragments
+    observed_test_result: PASS
+    governance_status: NOT_VERIFIED
+  - id: SE-SEC-004-network-scope
+    scenario: public_address_dns_name_and_out_of_scope_target
+    disposition: applicable
+    test: tests/test_safety.py;tests/test_api.py::test_public_target_is_rejected;tests/test_api.py::test_dns_hostname_is_rejected
+    observed_test_result: PASS
+    governance_status: NOT_VERIFIED
+  - id: SE-SEC-004-transport
+    scenario: tls_certificate_validation_and_redirect_suppression
+    disposition: applicable
+    test: not_yet_implemented
+    governance_status: NOT_VERIFIED
+  - id: SE-SEC-005-secrets
+    scenario: api_key_not_embedded_in_source_or_logs
+    disposition: applicable
+    test: not_yet_implemented
+    governance_status: NOT_VERIFIED
+  - id: SE-SEC-006-rate-control
+    scenario: run_budget_abuse_and_concurrent_run_abuse
+    disposition: applicable
+    test: tests/test_api.py::test_run_budget_is_validated_server_side;tests/test_api.py::test_second_run_is_rejected_while_a_run_is_active
+    observed_test_result: PASS
+    governance_status: NOT_VERIFIED
+  - id: SE-SEC-007-audit
+    scenario: audit_chain_verification_and_tamper_detection
+    disposition: applicable
+    test: tests/test_api.py::test_registered_local_target_can_be_measured_and_audited;tests/test_api.py::test_audit_chain_detects_modified_event
+    observed_test_result: PASS
+    governance_status: NOT_VERIFIED
+  - id: SE-SEC-008-dependencies
+    scenario: dependency_vulnerability_and_license_review
+    disposition: applicable
+    test: not_yet_run
+    governance_status: NOT_VERIFIED
+  - id: SE-SEC-009-exposure
+    scenario: unsafe_remote_bind_and_dashboard_headers
+    disposition: applicable
+    test: tests/test_safety.py::test_configuration_refuses_non_loopback_bind;tests/test_safety.py::test_supported_launcher_uses_loopback_by_default;tests/test_api.py::test_dashboard_sends_baseline_security_headers
+    observed_test_result: PASS
+    governance_status: NOT_VERIFIED
+  - id: SE-SEC-010-history
+    scenario: secret_leakage_in_git_history
+    disposition: applicable
+    test: not_yet_run
+    governance_status: NOT_VERIFIED
+  - id: SE-DB-002-sql
+    scenario: parameterized_database_queries
+    disposition: applicable
+    test: code_review_only
+    governance_status: NOT_VERIFIED
+  - id: SE-OBS-003-logs
+    scenario: diagnostic_log_redaction_and_crash_dump_governance
+    disposition: partial
+    test: not_yet_implemented
+    governance_status: NOT_VERIFIED
+  - id: SE-TST-004-csrf
+    scenario: csrf_on_cookie_authenticated_mutation
+    disposition: not_applicable
+    governance_status: NOT_APPLICABLE
+    rationale: "No cookie-based authentication or browser session is used; API uses an Authorization bearer header and does not enable CORS."
+  - id: SE-TST-004-tenant-isolation
+    scenario: cross_tenant_read_write_isolation
+    disposition: not_applicable
+    governance_status: NOT_APPLICABLE
+    rationale: "No tenant or user model exists in this single-operator local MVP; multi-user deployment is out of scope and blocked."
