@@ -37,6 +37,7 @@ The engine schedules requests for no longer than the configured duration, then a
 ## Run locally
 
 PowerShell:
+
 ```powershell
 cd path\to\GurGur
 py -3.13 -m venv .venv
@@ -51,6 +52,7 @@ python -m app
 Open `http://127.0.0.1:8000`, paste the generated API key into the dashboard, and select **Unlock**. Register a target that is listening on a private/loopback address and a port from 1024 to 65535. Start with 1–2 requests/second for 5 seconds.
 
 Linux/macOS:
+
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
@@ -63,19 +65,26 @@ python -m app
 `LAB_API_KEY` is mandatory and must be at least 32 characters. Do not commit it or put it in screenshots. The dashboard keeps it in browser `sessionStorage` for the current tab session only. The dashboard uses a same-origin Content Security Policy and baseline anti-framing/content-sniffing headers.
 
 ## Run tests
+
 ```bash
 pytest -q
 ```
+
 The integration test starts a local HTTP fixture on `127.0.0.1` and exercises target registration, the actual request engine, persisted run results, and audit-chain verification.
 
+
 ## Container run (optional)
+
 Set `LAB_API_KEY` in the shell or in a local, uncommitted `.env` file, then run:
+
 ```bash
 docker compose up --build
 ```
+
 The supplied Compose mapping publishes `8000` on host loopback only (`127.0.0.1:8000`). Docker is not required for local development. Container build and Compose validation were not available in the environment used to create this release, so validate them on the target host before relying on this path.
 
 ## API surface
+
 All `/api/*` routes and `/metrics` require `Authorization: Bearer <LAB_API_KEY>`.
 
 | Method | Endpoint | Purpose |
@@ -93,6 +102,7 @@ All `/api/*` routes and `/metrics` require `Authorization: Bearer <LAB_API_KEY>`
 Interactive OpenAPI docs are disabled in this MVP to reduce exposed surface.
 
 ## Architecture
+
 ```text
 Browser dashboard
       │ bearer-authenticated HTTP
@@ -107,11 +117,13 @@ Registered loopback / RFC1918 lab service
 ```
 
 ## Governance and verification status
+
 The implementation follows the applicable workflow from the repository currently served as GENCODE-GOV: inspect → plan → threat model → implement → verify → report. The project includes `docs/THREAT_MODEL.md`, `docs/EXPERIMENT_PROTOCOL.md`, and a scenario-based `.gencode-gov/security-test-matrix.yaml`.
 
 No claim is made that GENCODE-GOV CLI validation, AIGENT-SEC (formerly TSAR), independent security audit, dependency vulnerability review, secret-history scanning, or production deployment review has passed. Those checks have not been run here and remain **NOT VERIFIED**. The presence of the matrix is not evidence of passing controls.
 
 ## Known limitations before any remote or production deployment
+
 - Local, single-operator lab profile only; no multi-user authorization or tenant ownership.
 - No remote bind, HTTPS server termination, SSO, role model, or production secrets manager.
 - No packet capture, flow ingestion, IDS/IPS integration, attribution engine, adaptive detection model, or distributed agents yet.

@@ -29,11 +29,13 @@ class QuietHandler(BaseHTTPRequestHandler):
 
 
 @pytest.fixture
+
 def api_key() -> str:
     return TEST_KEY
 
 
 @pytest.fixture
+
 def target_server():
     server = ThreadingHTTPServer(("127.0.0.1", 0), QuietHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -47,6 +49,7 @@ def target_server():
 
 
 @pytest.fixture
+
 def client(tmp_path, api_key):
     settings = Settings(api_key=api_key, database_path=tmp_path / "gurgur.sqlite3")
     application = create_app(settings)

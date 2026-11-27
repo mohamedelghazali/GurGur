@@ -81,6 +81,7 @@ def test_metrics_endpoint_requires_authentication(client, api_key):
     assert client.get("/metrics", headers=auth(api_key)).status_code == 200
 
 
+
 def test_second_run_is_rejected_while_a_run_is_active(client, api_key, target_server):
     target = register_target(client, api_key, port=target_server).json()
     payload = {"target_id": target["id"], "requests_per_second": 1, "duration_seconds": 5, "concurrency": 1}
@@ -110,6 +111,7 @@ def test_audit_chain_detects_modified_event(client, api_key):
     assert result.json()["valid"] is False
 
 
+
 def test_dashboard_sends_baseline_security_headers(client):
     response = client.get("/")
     assert response.status_code == 200
@@ -126,9 +128,11 @@ def test_api_responses_are_not_cacheable(client, api_key):
     assert response.headers["cache-control"] == "no-store"
 
 
+
 def test_non_ascii_bearer_header_is_rejected_without_server_error(client):
     response = client.get("/api/v1/targets", headers=[(b"authorization", b"Bearer \xff")])
     assert response.status_code == 401
+
 
 
 def test_unknown_run_id_is_not_disclosed(client, api_key):

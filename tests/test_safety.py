@@ -26,6 +26,7 @@ def test_rejects_non_private_url_even_if_persisted():
         validate_target_url("http://203.0.113.10:8081/")
 
 
+
 def test_configuration_requires_strong_api_key(monkeypatch):
     monkeypatch.setenv("LAB_API_KEY", "too-short")
     with pytest.raises(RuntimeError, match="LAB_API_KEY is required"):
@@ -37,6 +38,7 @@ def test_configuration_refuses_non_loopback_bind(monkeypatch):
     monkeypatch.setenv("LAB_BIND_HOST", "0.0.0.0")
     with pytest.raises(RuntimeError, match="Remote binding is disabled"):
         Settings.from_env()
+
 
 
 def test_container_mode_requires_loopback_publish_ack(monkeypatch):
