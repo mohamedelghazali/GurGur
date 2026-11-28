@@ -13,7 +13,8 @@ from fastapi.staticfiles import StaticFiles
 from .audit import create_signed_checkpoint, verify_signed_checkpoint
 from .config import Settings
 from .db import Store, utc_now
-from .detection import MAX_EVALUATION_EVENTS, RULESET_VERSION, evaluate_events, rules_catalog\nfrom .baselines import analyze as analyze_baselines
+from .detection import MAX_EVALUATION_EVENTS, RULESET_VERSION, evaluate_events, rules_catalog
+from .baselines import analyze as analyze_baselines
 from .engine import BoundedTrafficEngine, safe_target_summary
 from .safety import validate_private_target, validate_target_url
 from .schemas import AuditCheckpoint, RunCreate, StopResponse, TargetCreate
