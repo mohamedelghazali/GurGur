@@ -1,6 +1,6 @@
 (() => {
   const $ = id => document.getElementById(id);
-  let apiKey = sessionStorage.getItem('gurgur_api_key') || '';
+  let apiKey = sessionStorage.getItem('zyrax_api_key') || '';
   let activeRunId = null;
   let pollHandle = null;
   let targets = [];
@@ -91,9 +91,9 @@
   $('saveKey').addEventListener('click', async () => {
     apiKey = $('apiKey').value.trim();
     if (apiKey.length < 32) return notify('API key must be at least 32 characters.', true);
-    sessionStorage.setItem('gurgur_api_key', apiKey);
+    sessionStorage.setItem('zyrax_api_key', apiKey);
     try { await refreshTargets(); await refreshHistory(); $('systemStatus').textContent = '● AUTHENTICATED'; notify('Control plane unlocked.'); }
-    catch (error) { sessionStorage.removeItem('gurgur_api_key'); apiKey = ''; notify(error.message, true); }
+    catch (error) { sessionStorage.removeItem('zyrax_api_key'); apiKey = ''; notify(error.message, true); }
   });
   $('targetForm').addEventListener('submit', async event => {
     event.preventDefault();

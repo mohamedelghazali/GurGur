@@ -12,12 +12,12 @@ Include the affected version or commit, impact, reproduction steps, and any rele
 
 ## Security scope
 
-GurGur is intentionally restricted to loopback and RFC1918 IPv4 targets, a fixed HTTP request profile, and hard-coded low-rate/time/concurrency/request ceilings. Reports concerning bypasses of those controls are in scope. Do not use the software to target public systems.
+ZYRAX is intentionally restricted to loopback and RFC1918 IPv4 targets, a fixed HTTP request profile, and hard-coded low-rate/time/concurrency/request ceilings. Reports concerning bypasses of those controls are in scope. Do not use the software to target public systems.
 
 
 ## v0.2 core-hardening controls
 
-The 0.2 development line adds a non-blocking OS-level run lock and a transactionally maintained SQLite run-control row. This supports one active run across GurGur workers that share the same database and local filesystem lock semantics. Multi-host deployments and filesystems without reliable advisory locking are not supported.
+The 0.2 development line adds a non-blocking OS-level run lock and a transactionally maintained SQLite run-control row. This supports one active run across ZYRAX workers that share the same database and local filesystem lock semantics. Multi-host deployments and filesystems without reliable advisory locking are not supported.
 
 SQLite backups use the online backup API, a SHA-256 sidecar, and integrity/foreign-key checks. Restoring is an offline maintenance operation; stop every process that uses the database first. The restore command requires `--confirm-offline` and creates a pre-restore backup when the current database exists.
 

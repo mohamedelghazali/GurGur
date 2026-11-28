@@ -1,4 +1,4 @@
-# GurGur — Product Roadmap
+# ZYRAX — Product Roadmap
 
 **Latest stable baseline:** `0.1.0`  
 **Current development line:** `0.2.0.dev0` — Core Hardening  
@@ -6,7 +6,7 @@
 
 ## Product objective
 
-Evolve GurGur from a bounded private-network measurement console into an explainable network intelligence, threat detection, defense validation, and investigation platform for authorized environments.
+Evolve ZYRAX from a bounded private-network measurement console into an explainable network intelligence, threat detection, defense validation, and investigation platform for authorized environments.
 
 The sequence is deliberate: harden the local control plane before adding telemetry volume, detection complexity, sensors, or additional operators.
 
@@ -164,4 +164,4 @@ A change to a safety invariant requires explicit authorization, a threat-model u
 
 For each milestone, record the commit SHA, scope, architecture/threat-model changes, requirement-to-code-to-test traceability, exact runner/version/commands/results, artifact hashes, relevant dependency/secret checks, and unresolved BLOCKED or NOT VERIFIED items.
 
-GurGur's development and test process is self-contained. It must not require external governance repositories or policy frameworks. A green CI run alone does not establish complete security or production readiness.
+ZYRAX's development and test process is self-contained. It must not require external governance repositories or policy frameworks. A green CI run alone does not establish complete security or production readiness.

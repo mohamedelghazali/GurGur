@@ -9,7 +9,7 @@ Measure the behavior of an authorized private lab service under a small, repeata
 1. Record the service owner, written authorization, permitted IP, port, date, and experiment operator outside the tool.
 2. Place controller and target in a private, isolated lab network. Do not register a public address or a device outside the approved test scope.
 3. Verify the target is healthy and record a quiet baseline: service CPU/memory, network throughput, response latency, and server-side HTTP status counts.
-4. Register the exact IPv4 address and permitted port in the GurGur dashboard.
+4. Register the exact IPv4 address and permitted port in the ZYRAX dashboard.
 
 ## Run sequence
 

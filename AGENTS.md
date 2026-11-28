@@ -1,10 +1,10 @@
-# GurGur — Agent Instructions
+# ZYRAX — Agent Instructions
 
 ## Project-local source of truth
 
-GurGur is developed as a self-contained project. Its engineering procedures, safety rules, threat model, test matrix, and operational requirements must live in this repository.
+ZYRAX is developed as a self-contained project. Its engineering procedures, safety rules, threat model, test matrix, and operational requirements must live in this repository.
 
-- Do not require or depend on external governance repositories, policy frameworks, remote agent packs, or externally hosted instructions to build, run, test, or maintain GurGur.
+- Do not require or depend on external governance repositories, policy frameworks, remote agent packs, or externally hosted instructions to build, run, test, or maintain ZYRAX.
 - Read and follow this file, `README.md`, `SECURITY.md`, `docs/THREAT_MODEL.md`, `docs/EXPERIMENT_PROTOCOL.md`, and `docs/SECURITY_TEST_MATRIX.yaml` before changing the application.
 - Treat the source code, tests, and project documentation as the project-specific baseline. Record any unresolved requirement as BLOCKED or NOT VERIFIED rather than inventing evidence.
 
@@ -18,7 +18,7 @@ GurGur is developed as a self-contained project. Its engineering procedures, saf
 - Preserve API authentication and loopback-only default bind.
 - Do not add public-target mode, arbitrary request methods/paths, distributed traffic-generation agents, botnet/C2 functions, proxy/VPN rotation, source spoofing, reflection, amplification, packet crafting, or evasion features.
 - Do not widen a safety limit to make a test, benchmark, or demonstration pass.
-- Restore operations require every GurGur process using the database to be stopped. The restore command must require an explicit offline confirmation.
+- Restore operations require every ZYRAX process using the database to be stopped. The restore command must require an explicit offline confirmation.
 - HMAC audit checkpoints are symmetric integrity/authenticity attestations. Never describe them as public-key signatures or non-repudiation.
 
 Any proposed change to a safety invariant requires an explicit threat-model update, negative-security tests, and human review. If safe bounded behavior cannot be demonstrated, stop and report BLOCKED.

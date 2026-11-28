@@ -1,13 +1,13 @@
-# GurGur — Threat Model (0.2.0.dev0)
+# ZYRAX — Threat Model (0.2.0.dev0)
 
 **Scope:** Local-first, single-operator network measurement and defense-research service.  
 **Status:** Development candidate; this document is not a production security certification.
 
 ## 1. Purpose and security boundary
 
-GurGur measures the behavior of an authorized loopback or RFC1918 IPv4 lab service using a deliberately small, fixed-profile HTTP request stream. It stores run metadata and a hash-linked audit history, with optional detached HMAC checkpoints and SQLite recovery tools.
+ZYRAX measures the behavior of an authorized loopback or RFC1918 IPv4 lab service using a deliberately small, fixed-profile HTTP request stream. It stores run metadata and a hash-linked audit history, with optional detached HMAC checkpoints and SQLite recovery tools.
 
-GurGur is not a denial-of-service generator. It does not provide public targeting, distributed traffic generation, botnet/C2, proxy/VPN rotation, source spoofing, reflection, amplification, packet crafting, evasion, arbitrary HTTP methods or paths, or unrestricted stress testing.
+ZYRAX is not a denial-of-service generator. It does not provide public targeting, distributed traffic generation, botnet/C2, proxy/VPN rotation, source spoofing, reflection, amplification, packet crafting, evasion, arbitrary HTTP methods or paths, or unrestricted stress testing.
 
 The supported local launcher binds to loopback. The Docker profile publishes the host port on loopback only. Direct Uvicorn bind overrides are unsupported.
 
@@ -24,7 +24,7 @@ The supported local launcher binds to loopback. The Docker profile publishes the
 
 ## 3. Actors and trust boundaries
 
-Actors include the authorized local operator, other GurGur workers sharing the same local database, unauthorized local processes or browser pages, mistaken operators, process crashes/restarts, and attackers who gain access to the database directory, backup artifacts, or application environment.
+Actors include the authorized local operator, other ZYRAX workers sharing the same local database, unauthorized local processes or browser pages, mistaken operators, process crashes/restarts, and attackers who gain access to the database directory, backup artifacts, or application environment.
 
 | Boundary | Threat | Control |
 |---|---|---|
@@ -66,7 +66,7 @@ Online backup uses SQLite's backup API to produce a consistent snapshot while th
 
 Verification checks the sidecar digest and database integrity. Restore first verifies the source, creates a pre-restore backup if a destination exists, stages a validated copy, removes stale WAL/SHM sidecars, and atomically replaces the database.
 
-Restore cannot reliably detect every application process that might still hold an open database connection. The operator must stop every GurGur process/container using the database and explicitly pass --confirm-offline. Running restore against an active database is unsupported and may cause data loss or divergent database files.
+Restore cannot reliably detect every application process that might still hold an open database connection. The operator must stop every ZYRAX process/container using the database and explicitly pass --confirm-offline. Running restore against an active database is unsupported and may cause data loss or divergent database files.
 
 0.1 database files and backups are accepted; the 0.2 Store adds run_control and stop_requested schema elements on open.
 

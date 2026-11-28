@@ -63,8 +63,8 @@ def test_run_claim_is_atomic_and_stale_rows_are_recoverable(tmp_path):
 
 
 def test_online_backup_verify_and_restore_preserve_consistent_state(tmp_path):
-    database = tmp_path / "gurgur.sqlite3"
-    backup = tmp_path / "backups" / "gurgur.sqlite3"
+    database = tmp_path / "zyrax.sqlite3"
+    backup = tmp_path / "backups" / "zyrax.sqlite3"
     store = Store(database)
     store.add_target(_target("original"))
     store.add_audit("test.snapshot", None, {"purpose": "backup-test"})

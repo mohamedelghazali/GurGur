@@ -1,1 +1,1 @@
-"""GurGur network research and defense lab application package."""
+"""ZYRAX network research and defense lab application package."""

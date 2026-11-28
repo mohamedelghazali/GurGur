@@ -21,7 +21,7 @@ from .db import Store, backup_database, restore_database, verify_backup
 
 
 def _database_path() -> Path:
-    return Path(os.getenv("LAB_DATABASE_PATH", "./data/gurgur.sqlite3"))
+    return Path(os.getenv("LAB_DATABASE_PATH", "./data/zyrax.sqlite3"))
 
 
 def _audit_key() -> tuple[str, str]:
@@ -37,7 +37,7 @@ def _audit_key() -> tuple[str, str]:
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="python -m app",
-        description="GurGur local administration and bounded lab service.",
+        description="ZYRAX local administration and bounded lab service.",
     )
     commands = parser.add_subparsers(dest="command")
 
@@ -50,12 +50,12 @@ def _build_parser() -> argparse.ArgumentParser:
     create.add_argument("--overwrite", action="store_true")
     verify = backup_commands.add_parser("verify", help="Verify a backup checksum and SQLite integrity.")
     verify.add_argument("--input", required=True, type=Path)
-    restore = backup_commands.add_parser("restore", help="Restore a verified backup while GurGur is stopped.")
+    restore = backup_commands.add_parser("restore", help="Restore a verified backup while ZYRAX is stopped.")
     restore.add_argument("--input", required=True, type=Path)
     restore.add_argument(
         "--confirm-offline",
         action="store_true",
-        help="Confirm all GurGur server/worker processes have been stopped.",
+        help="Confirm all ZYRAX server/worker processes have been stopped.",
     )
 
     audit = commands.add_parser("audit", help="Create and verify detached signed audit checkpoints.")
@@ -88,7 +88,7 @@ def _run_command(args: argparse.Namespace) -> int:
         if args.backup_command == "restore":
             if not args.confirm_offline:
                 raise RuntimeError(
-                    "Restore refused: stop every GurGur process and pass --confirm-offline."
+                    "Restore refused: stop every ZYRAX process and pass --confirm-offline."
                 )
             result = restore_database(args.input, _database_path())
             print(json.dumps(result, indent=2, sort_keys=True))
@@ -162,7 +162,7 @@ def main(argv: Sequence[str] | None = None) -> None:
         try:
             exit_code = _run_command(args)
         except (OSError, ValueError, RuntimeError) as exc:
-            print(f"GurGur administration error: {exc}", file=sys.stderr)
+            print(f"ZYRAX administration error: {exc}", file=sys.stderr)
             raise SystemExit(2) from exc
         raise SystemExit(exit_code)
 

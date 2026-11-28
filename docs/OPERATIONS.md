@@ -1,4 +1,4 @@
-# GurGur — Operations Runbook (0.2.0.dev0)
+# ZYRAX — Operations Runbook (0.2.0.dev0)
 
 This runbook covers only the current local single-operator profile.
 
@@ -18,7 +18,7 @@ Minimum environment:
 
 ```text
 LAB_API_KEY=<generated value>
-LAB_DATABASE_PATH=./data/gurgur.sqlite3
+LAB_DATABASE_PATH=./data/zyrax.sqlite3
 LAB_BIND_HOST=127.0.0.1
 LAB_BIND_PORT=8000
 ```
@@ -55,7 +55,7 @@ To stop cleanly, stop the service process/container. The application requests a 
 The current service has one shared API key loaded at process start.
 
 1. Generate a replacement with `python -m app keygen`.
-2. Update the protected `LAB_API_KEY` value for every GurGur worker/container.
+2. Update the protected `LAB_API_KEY` value for every ZYRAX worker/container.
 3. Stop and restart all workers so no process continues using the previous in-memory key.
 4. Re-enter the new key in the dashboard. The previous key is rejected after restart.
 
@@ -74,35 +74,35 @@ The run lock is not a multi-host distributed lock. Do not put the database/lock 
 
 ## 6. Online backup
 
-Backups can be created while GurGur is running because the command uses SQLite's online backup API:
+Backups can be created while ZYRAX is running because the command uses SQLite's online backup API:
 
 ```powershell
 New-Item -ItemType Directory -Force .\backups | Out-Null
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-python -m app backup create --output ".\backups\gurgur-$stamp.sqlite3"
+python -m app backup create --output ".\backups\zyrax-$stamp.sqlite3"
 ```
 
 The command writes a SQLite backup and a sibling `.sha256` sidecar. Verify before copying or storing the artifact:
 
 ```powershell
-python -m app backup verify --input ".\backups\gurgur-$stamp.sqlite3"
+python -m app backup verify --input ".\backups\zyrax-$stamp.sqlite3"
 ```
 
-Verification checks the SHA-256 digest, SQLite integrity, foreign-key integrity, and required GurGur tables. Store backups away from the live database and restrict access because they contain operational target/run/audit data.
+Verification checks the SHA-256 digest, SQLite integrity, foreign-key integrity, and required ZYRAX tables. Store backups away from the live database and restrict access because they contain operational target/run/audit data.
 
 ## 7. Offline restore
 
 Restore is not an online operation.
 
-1. Stop all GurGur processes and containers that use the target database.
+1. Stop all ZYRAX processes and containers that use the target database.
 2. Confirm no worker will restart during the maintenance operation.
 3. Run:
 
 ```powershell
-python -m app backup restore --input ".\backups\gurgur-YYYYMMDD-HHMMSS.sqlite3" --confirm-offline
+python -m app backup restore --input ".\backups\zyrax-YYYYMMDD-HHMMSS.sqlite3" --confirm-offline
 ```
 
-The command verifies the source backup, creates a timestamped pre-restore backup if the current database exists, stages a fresh copy, and replaces the database. Re-open GurGur only after the command succeeds.
+The command verifies the source backup, creates a timestamped pre-restore backup if the current database exists, stages a fresh copy, and replaces the database. Re-open ZYRAX only after the command succeeds.
 
 The code cannot reliably enumerate every external process holding the SQLite file. The operator's offline confirmation is mandatory. Never restore while a worker is running.
 

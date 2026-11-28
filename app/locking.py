@@ -6,7 +6,7 @@ from typing import BinaryIO
 
 
 class InterProcessRunLock:
-    """A non-blocking OS lock shared by all GurGur workers using one local database."""
+    """A non-blocking OS lock shared by all ZYRAX workers using one local database."""
 
     def __init__(self, database_path: Path):
         self.path = Path(f"{database_path}.run.lock")
@@ -65,7 +65,7 @@ class InterProcessRunLock:
 
     def __enter__(self) -> "InterProcessRunLock":
         if not self.acquire():
-            raise RuntimeError("A GurGur measurement run is already active.")
+            raise RuntimeError("A ZYRAX measurement run is already active.")
         return self
 
     def __exit__(self, *_exc: object) -> None:

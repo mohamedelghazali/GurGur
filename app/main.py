@@ -45,7 +45,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         store.close()
 
     application = FastAPI(
-        title="GurGur API",
+        title="ZYRAX API",
         version="0.2.0.dev0",
         description="Bounded traffic measurement and defensive telemetry for private lab targets.",
         docs_url=None,
@@ -86,7 +86,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @application.get("/health", tags=["system"])
     async def health() -> dict[str, str]:
-        return {"status": "ok", "service": "gurgur", "version": "0.2.0.dev0"}
+        return {"status": "ok", "service": "zyrax", "version": "0.2.0.dev0"}
 
     @application.get("/", include_in_schema=False)
     async def dashboard():
@@ -277,19 +277,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             else (current_store.list_runs(1) or [None])[0]
         )
         lines = [
-            "# HELP gurgur_up GurGur API process health.",
-            "# TYPE gurgur_up gauge",
-            "gurgur_up 1",
-            "# HELP gurgur_run_active Whether a measurement run is active.",
-            "# TYPE gurgur_run_active gauge",
-            f"gurgur_run_active {1 if active_id else 0}",
+            "# HELP zyrax_up ZYRAX API process health.",
+            "# TYPE zyrax_up gauge",
+            "zyrax_up 1",
+            "# HELP zyrax_run_active Whether a measurement run is active.",
+            "# TYPE zyrax_run_active gauge",
+            f"zyrax_run_active {1 if active_id else 0}",
         ]
         if latest:
             values = latest.get("result", {})
             for metric, key in (
-                ("gurgur_requests_started_total", "requests_started"),
-                ("gurgur_requests_completed_total", "requests_completed"),
-                ("gurgur_successful_responses_total", "successful_responses"),
+                ("zyrax_requests_started_total", "requests_started"),
+                ("zyrax_requests_completed_total", "requests_completed"),
+                ("zyrax_successful_responses_total", "successful_responses"),
             ):
                 lines.extend(
                     [f"# TYPE {metric} counter", f"{metric} {int(values.get(key, 0))}"]

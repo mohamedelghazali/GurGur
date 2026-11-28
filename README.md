@@ -1,12 +1,19 @@
-# GurGur
+# ZYRAX
 
-**Network Research & Defense Lab**  
+**See Beyond. Defend Smarter.**  
+**NETWORK INTELLIGENCE & DEFENSE PLATFORM**
+
+*Understand Every Signal.*  
+**Decode. Detect. Defend.**  
+*Engineered to See. Built to Defend.*
+
+**Network Intelligence & Defense Platform**  
 **Development version:** `0.2.0.dev0` — Core Hardening candidate  
 **Latest baseline:** `0.1.0` — local-first MVP
 
-GurGur is a local-first network measurement and defense-research console for authorized private lab environments. It combines a FastAPI control plane, bounded asynchronous HTTP measurements, SQLite persistence, a tamper-evident audit trail, a browser dashboard, and Prometheus-format metrics.
+ZYRAX is a local-first network measurement and defense-research console for authorized private lab environments. It combines a FastAPI control plane, bounded asynchronous HTTP measurements, SQLite persistence, a tamper-evident audit trail, a browser dashboard, and Prometheus-format metrics.
 
-> GurGur is a defensive lab tool, not an Internet DDoS generator. Active measurements are limited to explicitly registered loopback and RFC1918 IPv4 targets.
+> ZYRAX is a defensive lab tool, not an Internet DDoS generator. Active measurements are limited to explicitly registered loopback and RFC1918 IPv4 targets.
 
 ## Product direction
 
@@ -44,11 +51,11 @@ The engine schedules requests for no longer than the configured duration, then a
 
 ### Run coordination boundary
 
-The 0.2 development line combines a non-blocking OS-level lock file with a singleton `run_control` row in SQLite. This prevents another GurGur worker on the same host from claiming a run while the active owner holds the OS lock. Run claims and audit events are committed transactionally. A stopped/crashed owner releases the kernel lock; the next worker can then mark stale queued/running rows as failed and recover the control row. Stop requests are persisted so another worker can request a stop for a run it does not own.
+The 0.2 development line combines a non-blocking OS-level lock file with a singleton `run_control` row in SQLite. This prevents another ZYRAX worker on the same host from claiming a run while the active owner holds the OS lock. Run claims and audit events are committed transactionally. A stopped/crashed owner releases the kernel lock; the next worker can then mark stale queued/running rows as failed and recover the control row. Stop requests are persisted so another worker can request a stop for a run it does not own.
 
-This supports multiple GurGur processes that share the **same local database path and local filesystem lock semantics**. It does not provide multi-host coordination, NFS/distributed filesystem guarantees, or a multi-tenant execution model. Keep the database and `.run.lock` file on the same trusted local filesystem.
+This supports multiple ZYRAX processes that share the **same local database path and local filesystem lock semantics**. It does not provide multi-host coordination, NFS/distributed filesystem guarantees, or a multi-tenant execution model. Keep the database and `.run.lock` file on the same trusted local filesystem.
 
-GurGur intentionally contains no public-target mode, arbitrary request method/path, proxy/VPN rotation, source spoofing, packet crafting, reflection, amplification, distributed traffic-generation agents, botnet/C2 behavior, or evasion features. Broader detection scenarios should use offline event/PCAP replay rather than higher live traffic rates.
+ZYRAX intentionally contains no public-target mode, arbitrary request method/path, proxy/VPN rotation, source spoofing, packet crafting, reflection, amplification, distributed traffic-generation agents, botnet/C2 behavior, or evasion features. Broader detection scenarios should use offline event/PCAP replay rather than higher live traffic rates.
 
 ## Current capabilities
 
@@ -84,13 +91,13 @@ The current application still does not include Zeek or Suricata adapters, PCAP/f
 PowerShell:
 
 ```powershell
-cd path\to\GurGur
+cd path\to\ZYRAX
 py -3.13 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -e ".[test]"
 $env:LAB_API_KEY = (python -m app keygen)
-$env:LAB_DATABASE_PATH = ".\data\gurgur.sqlite3"
+$env:LAB_DATABASE_PATH = ".\data\zyrax.sqlite3"
 python -m app
 ```
 
@@ -102,7 +109,7 @@ python3 -m venv .venv
 python -m pip install --upgrade pip
 pip install -e '.[test]'
 export LAB_API_KEY="$(python -m app keygen)"
-export LAB_DATABASE_PATH="./data/gurgur.sqlite3"
+export LAB_DATABASE_PATH="./data/zyrax.sqlite3"
 python -m app
 ```
 
@@ -112,10 +119,10 @@ Open `http://127.0.0.1:8000`, enter the generated API key, and select **Unlock**
 
 ## API-key rotation
 
-GurGur currently uses one shared operator API key supplied through `LAB_API_KEY`; there is no multi-key registry or user/RBAC model.
+ZYRAX currently uses one shared operator API key supplied through `LAB_API_KEY`; there is no multi-key registry or user/RBAC model.
 
 1. Generate a replacement with `python -m app keygen`.
-2. Update the protected environment or secret configuration used by every GurGur worker.
+2. Update the protected environment or secret configuration used by every ZYRAX worker.
 3. Stop and restart all workers/containers so every process loads the new value.
 4. Re-enter the new key in the dashboard. The old key is rejected by the restarted application.
 
@@ -123,22 +130,22 @@ The key is not stored in the SQLite database. Rotation requires a process restar
 
 ## Database backup, verification, and restore
 
-Create an online, WAL-consistent backup while GurGur is running:
+Create an online, WAL-consistent backup while ZYRAX is running:
 
 ```bash
-python -m app backup create --output ./backups/gurgur-2026-11-28.sqlite3
+python -m app backup create --output ./backups/zyrax-2026-11-28.sqlite3
 ```
 
-Verify the SHA-256 sidecar, SQLite integrity, foreign-key consistency, and GurGur schema:
+Verify the SHA-256 sidecar, SQLite integrity, foreign-key consistency, and ZYRAX schema:
 
 ```bash
-python -m app backup verify --input ./backups/gurgur-2026-11-28.sqlite3
+python -m app backup verify --input ./backups/zyrax-2026-11-28.sqlite3
 ```
 
-Restore is an offline maintenance operation. Stop **every** GurGur process/container using the database, then explicitly confirm:
+Restore is an offline maintenance operation. Stop **every** ZYRAX process/container using the database, then explicitly confirm:
 
 ```bash
-python -m app backup restore --input ./backups/gurgur-2026-11-28.sqlite3 --confirm-offline
+python -m app backup restore --input ./backups/zyrax-2026-11-28.sqlite3 --confirm-offline
 ```
 
 The restore command rejects execution without `--confirm-offline`, verifies the source backup first, and creates a timestamped pre-restore backup if the current database exists. Protect backups as sensitive operational data: they can include private target IP addresses, run metadata, and audit history.
@@ -215,7 +222,7 @@ python -m pytest -q --cov=app --cov-report=term-missing
 
 The 0.2 candidate was exercised in an isolated Python 3.11.2 environment: **44 tests passed, 0 failed, 77% application line coverage**. CLI smoke checks passed for API-key generation, online backup, backup verification, signed checkpoint creation/verification, and offline restore. GitHub Actions across Python 3.11/3.12/3.13 and the dependency audit remain separate release gates.
 
-This development iteration is self-contained within GurGur. It does not require external governance repositories or policy frameworks to build or run. A test pass is evidence for the tests actually executed, not a comprehensive security audit or production-readiness certification.
+This development iteration is self-contained within ZYRAX. It does not require external governance repositories or policy frameworks to build or run. A test pass is evidence for the tests actually executed, not a comprehensive security audit or production-readiness certification.
 
 ## Known limitations
 

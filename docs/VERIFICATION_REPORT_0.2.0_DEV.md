@@ -1,4 +1,4 @@
-# GurGur 0.2.0.dev0 — Candidate Verification Report
+# ZYRAX 0.2.0.dev0 — Candidate Verification Report
 
 **Candidate commit:** `67254209572c320968a69db52c64b041b5769701`  
 **Observed:** 2026-11-28  
@@ -55,4 +55,4 @@ The following have not yet been verified:
 - Multi-host coordination (not supported by design).
 - Production deployment or recovery readiness.
 
-This report documents the exact checks run on the candidate commit. It is not a comprehensive security audit or production-readiness approval. No external governance repository or framework is required for GurGur's current development or test process.
+This report documents the exact checks run on the candidate commit. It is not a comprehensive security audit or production-readiness approval. No external governance repository or framework is required for ZYRAX's current development or test process.

@@ -6,9 +6,9 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY app ./app
 RUN pip install --no-cache-dir . \
-    && useradd --create-home --uid 10001 gurgur \
+    && useradd --create-home --uid 10001 zyrax \
     && mkdir -p /app/data \
-    && chown -R gurgur:gurgur /app
-USER gurgur
+    && chown -R zyrax:zyrax /app
+USER zyrax
 EXPOSE 8000
 CMD ["python", "-m", "app"]

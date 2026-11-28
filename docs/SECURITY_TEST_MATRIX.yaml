@@ -1,5 +1,5 @@
 version: 2
-project: gurgur
+project: zyrax
 baseline: "0.2.0.dev0"
 verification_snapshot:
   commit: "67254209572c320968a69db52c64b041b5769701"

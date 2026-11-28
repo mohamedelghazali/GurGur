@@ -62,7 +62,7 @@ class Settings:
 
         return cls(
             api_key=api_key,
-            database_path=Path(os.getenv("LAB_DATABASE_PATH", "./data/gurgur.sqlite3")),
+            database_path=Path(os.getenv("LAB_DATABASE_PATH", "./data/zyrax.sqlite3")),
             bind_host=bind_host,
             bind_port=bind_port,
             audit_signing_key=audit_key,

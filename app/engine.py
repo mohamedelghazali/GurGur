@@ -56,7 +56,7 @@ class BoundedTrafficEngine:
             if self._active_run_id is not None:
                 raise RuntimeError("A measurement run is already active.")
             if not self._run_file_lock.acquire():
-                raise RuntimeError("A measurement run is active in another GurGur worker.")
+                raise RuntimeError("A measurement run is active in another ZYRAX worker.")
             owner_token = uuid4().hex
             try:
                 self.store.recover_abandoned_runs()
@@ -70,7 +70,7 @@ class BoundedTrafficEngine:
             self._owner_tokens[run["id"]] = owner_token
             task = asyncio.create_task(
                 self._execute(run, target, owner_token, stop_event),
-                name=f"gurgur-{run['id']}",
+                name=f"zyrax-{run['id']}",
             )
             self._tasks[run["id"]] = task
 
@@ -205,7 +205,7 @@ class BoundedTrafficEngine:
                 follow_redirects=False,
                 trust_env=False,
                 verify=True,
-                headers={"User-Agent": "GurGur/0.2.0-dev (+authorized-private-lab)"},
+                headers={"User-Agent": "ZYRAX/0.2.0-dev (+authorized-private-lab)"},
             ) as client:
                 while counts["started"] < max_requests:
                     if stop_event.is_set() or self.store.is_stop_requested(run_id):

@@ -534,7 +534,7 @@ def verify_backup(backup_path: Path) -> dict[str, Any]:
             )
         }
         if not {"targets", "runs", "audit_events"}.issubset(tables):
-            raise RuntimeError("Backup does not contain the required legacy GurGur tables.")
+            raise RuntimeError("Backup does not contain the required legacy ZYRAX tables.")
     finally:
         connection.close()
     return {"valid": True, "sha256": actual, "size_bytes": source.stat().st_size}
@@ -575,7 +575,7 @@ def backup_database(source_path: Path, destination_path: Path, overwrite: bool =
 
 
 def restore_database(backup_path: Path, database_path: Path) -> dict[str, Any]:
-    """Restore an integrity-checked backup. The caller must stop every GurGur process first."""
+    """Restore an integrity-checked backup. The caller must stop every ZYRAX process first."""
     backup = Path(backup_path)
     database = Path(database_path)
     verification = verify_backup(backup)

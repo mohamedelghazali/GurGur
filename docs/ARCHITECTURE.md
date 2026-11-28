@@ -1,4 +1,4 @@
-# GurGur — Target Architecture
+# ZYRAX — Target Architecture
 
 **Document status:** Architecture direction for planned releases  
 **Current software baseline:** `0.1.0` (MVP)  
@@ -7,7 +7,7 @@
 
 ## 1. Product vision
 
-GurGur is evolving toward an **Intelligent Network Threat Detection & Defense Validation Platform** for authorized private environments.
+ZYRAX is evolving toward an **Intelligent Network Threat Detection & Defense Validation Platform** for authorized private environments.
 
 The target platform has five connected capabilities:
 
@@ -59,7 +59,7 @@ Operator CLI:
   keygen | backup create/verify/restore | audit checkpoint/verify
 ```
 
-The run-lock file is held for the lifetime of a measurement run and is automatically released by the operating system when its owner process exits. The SQLite row records the run owner and state so the next lock owner can recover stale rows. This contract applies only to GurGur workers sharing one local database path and a filesystem that correctly implements the required advisory lock semantics. It is not a distributed lock or a multi-host coordination protocol.
+The run-lock file is held for the lifetime of a measurement run and is automatically released by the operating system when its owner process exits. The SQLite row records the run owner and state so the next lock owner can recover stale rows. This contract applies only to ZYRAX workers sharing one local database path and a filesystem that correctly implements the required advisory lock semantics. It is not a distributed lock or a multi-host coordination protocol.
 
 ## 3. Target logical architecture (planned)
 
@@ -125,7 +125,7 @@ All adapters should map records to a versioned event envelope. The minimum commo
 | `event_id` | Stable event identity for deduplication |
 | `schema_version` | Version of the normalized event contract |
 | `observed_at` | Source observation time in UTC |
-| `ingested_at` | GurGur ingestion time in UTC |
+| `ingested_at` | ZYRAX ingestion time in UTC |
 | `source_type` / `sensor_id` | Provenance of the observation |
 | `event_type` | Connection, DNS, HTTP, alert, or service event |
 | `src` / `dst` | Observed endpoint metadata where available |
@@ -169,7 +169,7 @@ The validation center should answer measurable questions about existing defenses
 - Did the service remain healthy?
 - How quickly did the service return to its measured baseline?
 
-Prefer offline replay and synthetic event fixtures for broad scenario coverage. Any active measurement must remain inside the current private-target safety envelope and require explicit authorization. GurGur should observe and report control behavior; it must not silently change firewall, WAF, routing, or production settings. Any future response integration requires explicit operator approval, a preview of the action, a bounded scope, and a tested rollback path.
+Prefer offline replay and synthetic event fixtures for broad scenario coverage. Any active measurement must remain inside the current private-target safety envelope and require explicit authorization. ZYRAX should observe and report control behavior; it must not silently change firewall, WAF, routing, or production settings. Any future response integration requires explicit operator approval, a preview of the action, a bounded scope, and a tested rollback path.
 
 ### 4.5 Network forensics and evidence (planned)
 
@@ -200,7 +200,7 @@ Incidents should retain linked detections, evidence references, operator decisio
 
 ## 5. Observability and operational health
 
-Use OpenTelemetry instrumentation and the OpenTelemetry Collector as the planned vendor-neutral collection layer for GurGur service telemetry. Export operational metrics to Prometheus or another explicitly selected backend.
+Use OpenTelemetry instrumentation and the OpenTelemetry Collector as the planned vendor-neutral collection layer for ZYRAX service telemetry. Export operational metrics to Prometheus or another explicitly selected backend.
 
 Track at least:
 
@@ -256,7 +256,7 @@ The following are product boundaries, not tunable performance settings:
 
 ### Important destination-boundary distinction
 
-GurGur's authorized measurement feature deliberately targets registered loopback/RFC1918 lab services. This is a narrow, operator-controlled destination allow-list, not a general-purpose URL fetcher. Preserve literal-IP validation, fixed `GET /`, port constraints, disabled redirects, and no DNS resolution. Do not broaden it into arbitrary user-supplied URL fetching; generic URL fetchers must apply a separate SSRF-safe destination policy.
+ZYRAX's authorized measurement feature deliberately targets registered loopback/RFC1918 lab services. This is a narrow, operator-controlled destination allow-list, not a general-purpose URL fetcher. Preserve literal-IP validation, fixed `GET /`, port constraints, disabled redirects, and no DNS resolution. Do not broaden it into arbitrary user-supplied URL fetching; generic URL fetchers must apply a separate SSRF-safe destination policy.
 
 ## 8. Release and governance gates
 

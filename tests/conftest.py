@@ -7,10 +7,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import pytest
 from fastapi.testclient import TestClient
 
-TEST_KEY = "test-only-gurgur-key-0123456789abcdef"
+TEST_KEY = "test-only-zyrax-key-0123456789abcdef"
 TEST_AUDIT_KEY = "test-only-audit-signing-key-0123456789abcdef"
 os.environ.setdefault("LAB_API_KEY", TEST_KEY)
-os.environ.setdefault("LAB_DATABASE_PATH", "/tmp/gurgur-test-import.sqlite3")
+os.environ.setdefault("LAB_DATABASE_PATH", "/tmp/zyrax-test-import.sqlite3")
 
 from app.config import Settings  # noqa: E402
 from app.main import create_app  # noqa: E402
@@ -51,7 +51,7 @@ def target_server():
 def client(tmp_path, api_key):
     settings = Settings(
         api_key=api_key,
-        database_path=tmp_path / "gurgur.sqlite3",
+        database_path=tmp_path / "zyrax.sqlite3",
         audit_signing_key=TEST_AUDIT_KEY,
         audit_signing_key_id="test-v1",
     )
