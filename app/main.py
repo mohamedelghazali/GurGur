@@ -14,6 +14,7 @@ from .audit import create_signed_checkpoint, verify_signed_checkpoint
 from .config import Settings
 from .db import Store, utc_now
 from .detection import MAX_EVALUATION_EVENTS, RULESET_VERSION, evaluate_events, rules_catalog
+from .baselines import analyze as analyze_baselines
 from .engine import BoundedTrafficEngine, safe_target_summary
 from .safety import validate_private_target, validate_target_url
 from .schemas import AuditCheckpoint, RunCreate, StopResponse, TargetCreate
@@ -166,6 +167,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if source not in {None, "zeek", "suricata", "pcap"}:
             raise HTTPException(status_code=422, detail="Unsupported telemetry source.")
         return request.app.state.store.list_telemetry_events(limit, source)
+
+    @application.get("/api/v1/telemetry/baselines")
+    async def telemetry_baselines(request: Request, limit: int = 5000) -> dict[str, Any]:
+        if not 1 <= limit <= 5000:
+            raise HTTPException(status_code=422, detail="limit must be between 1 and 5000.")
+        events = request.app.state.store.list_detection_input_events(limit)
+        return analyze_baselines(events)
 
     @application.get("/api/v1/detection/rules")
     async def list_detection_rules() -> list[dict[str, Any]]:

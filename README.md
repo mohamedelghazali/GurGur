@@ -8,7 +8,7 @@
 *Engineered to See. Built to Defend.*
 
 **Network Intelligence & Defense Platform**  
-**Development version:** `0.4.1.dev0` — Alert Lifecycle & Investigation candidate  
+**Development version:** `0.5.0.dev0` — Behavioral Baselines & Detection Validation  
 **Latest baseline:** `0.1.0` — local-first MVP
 
 ZYRAX is a local-first network intelligence, detection, measurement, and defense-research console for authorized private lab environments. It combines a FastAPI control plane, bounded asynchronous HTTP measurements, SQLite persistence, a tamper-evident audit trail, a browser dashboard, and Prometheus-format metrics.
@@ -25,7 +25,7 @@ The long-term direction is an **Intelligent Network Threat Detection & Defense V
 - Network forensics with provenance, timelines, and integrity-verifiable evidence.
 - Human-controlled incident investigation, response documentation, and recovery verification.
 
-The current development line adds bounded Zeek/Suricata/PCAP ingestion and a deterministic, explainable rule-based detection engine. See [Telemetry Ingestion](docs/TELEMETRY.md) and [Detection Engine](docs/DETECTION.md). Statistical baselines, machine learning, multi-user RBAC, and forensic acquisition remain deferred until representative reviewed data and explicit operational requirements exist.
+The current development line adds bounded Zeek/Suricata/PCAP ingestion, deterministic explainable detection, and offline five-minute behavioral volume baselines. See [Behavioral Baselines](docs/BASELINES.md). See [Telemetry Ingestion](docs/TELEMETRY.md) and [Detection Engine](docs/DETECTION.md). Statistical baselines, machine learning, multi-user RBAC, and forensic acquisition remain deferred until representative reviewed data and explicit operational requirements exist.
 
 ## Safety envelope (server-enforced)
 
