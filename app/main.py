@@ -231,9 +231,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         classification = payload.get("classification", current["classification"])
         statuses = {"new", "acknowledged", "investigating", "resolved"}
         classifications = {"true_positive", "false_positive", "benign", "undetermined"}
-        if status not in statuses:
+        if not isinstance(status, str) or status not in statuses:
             raise HTTPException(status_code=422, detail="Unsupported alert status.")
-        if classification not in classifications:
+        if not isinstance(classification, str) or classification not in classifications:
             raise HTTPException(status_code=422, detail="Unsupported alert classification.")
         transitions = {
             "new": {"acknowledged", "investigating", "resolved"},
