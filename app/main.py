@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from .audit import create_signed_checkpoint, verify_signed_checkpoint
 from .config import Settings
 from .db import Store, utc_now
+from .detection import MAX_EVALUATION_EVENTS, RULESET_VERSION, evaluate_events, rules_catalog
 from .engine import BoundedTrafficEngine, safe_target_summary
 from .safety import validate_private_target, validate_target_url
 from .schemas import AuditCheckpoint, RunCreate, StopResponse, TargetCreate
@@ -165,6 +166,39 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if source not in {None, "zeek", "suricata", "pcap"}:
             raise HTTPException(status_code=422, detail="Unsupported telemetry source.")
         return request.app.state.store.list_telemetry_events(limit, source)
+
+    @application.get("/api/v1/detection/rules")
+    async def list_detection_rules() -> list[dict[str, Any]]:
+        return rules_catalog()
+
+    @application.post("/api/v1/detection/evaluate", status_code=201)
+    async def evaluate_detection(request: Request, limit: int = 5000) -> dict[str, Any]:
+        if not 1 <= limit <= MAX_EVALUATION_EVENTS:
+            raise HTTPException(
+                status_code=422,
+                detail=f"limit must be between 1 and {MAX_EVALUATION_EVENTS}.",
+            )
+        current_store: Store = request.app.state.store
+        events = current_store.list_detection_input_events(limit)
+        try:
+            findings = evaluate_events(events)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        result = current_store.persist_detection_results(
+            findings, len(events), RULESET_VERSION
+        )
+        result["alerts"] = findings
+        return result
+
+    @application.get("/api/v1/detection/alerts")
+    async def list_detection_alerts(
+        request: Request, limit: int = 100, severity: str | None = None
+    ) -> list[dict[str, Any]]:
+        if not 1 <= limit <= 500:
+            raise HTTPException(status_code=422, detail="limit must be between 1 and 500.")
+        if severity not in {None, "critical", "high", "medium", "low"}:
+            raise HTTPException(status_code=422, detail="Unsupported severity filter.")
+        return request.app.state.store.list_detection_alerts(limit, severity)
 
     @application.get("/api/v1/targets")
     async def list_targets(request: Request) -> list[dict[str, Any]]:
