@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sqlite3
 from uuid import uuid4
 
 import pytest
@@ -100,3 +101,52 @@ def test_backup_checksum_detects_modified_artifact(tmp_path):
 
     with pytest.raises(RuntimeError, match="SHA-256"):
         verify_backup(backup)
+
+
+def test_v01_backup_restores_and_migrates_to_v02_schema(tmp_path):
+    database = tmp_path / "legacy.sqlite3"
+    backup = tmp_path / "legacy-backup.sqlite3"
+    connection = sqlite3.connect(database)
+    connection.executescript(
+        """
+        CREATE TABLE targets (
+            id TEXT PRIMARY KEY, name TEXT NOT NULL, ip TEXT NOT NULL,
+            port INTEGER NOT NULL, scheme TEXT NOT NULL, created_at TEXT NOT NULL
+        );
+        CREATE TABLE runs (
+            id TEXT PRIMARY KEY, target_id TEXT NOT NULL REFERENCES targets(id),
+            status TEXT NOT NULL, requests_per_second INTEGER NOT NULL,
+            duration_seconds INTEGER NOT NULL, concurrency INTEGER NOT NULL,
+            started_at TEXT, finished_at TEXT, result_json TEXT NOT NULL DEFAULT '{}'
+        );
+        CREATE TABLE audit_events (
+            seq INTEGER PRIMARY KEY AUTOINCREMENT, occurred_at TEXT NOT NULL,
+            action TEXT NOT NULL, subject_id TEXT, details_json TEXT NOT NULL,
+            previous_hash TEXT NOT NULL, event_hash TEXT NOT NULL
+        );
+        """
+    )
+    target = _target("legacy")
+    connection.execute(
+        "INSERT INTO targets VALUES(?,?,?,?,?,?)",
+        (target["id"], target["name"], target["ip"], target["port"], target["scheme"], target["created_at"]),
+    )
+    run = _run(target["id"])
+    connection.execute(
+        """INSERT INTO runs(id,target_id,status,requests_per_second,duration_seconds,concurrency)
+           VALUES(?,?,?,?,?,?)""",
+        (run["id"], run["target_id"], "running", 1, 5, 1),
+    )
+    connection.commit()
+    connection.close()
+
+    backup_database(database, backup)
+    assert verify_backup(backup)["valid"] is True
+    restore_database(backup, database)
+
+    migrated = Store(database)
+    assert migrated.get_run(run["id"])["status"] == "running"
+    assert migrated.recover_abandoned_runs() == [run["id"]]
+    assert migrated.get_run(run["id"])["status"] == "failed"
+    assert migrated.verify_audit_chain()["valid"] is True
+    migrated.close()

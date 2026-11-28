@@ -526,8 +526,8 @@ def verify_backup(backup_path: Path) -> dict[str, Any]:
                 "SELECT name FROM sqlite_master WHERE type='table'"
             )
         }
-        if not {"targets", "runs", "audit_events", "run_control"}.issubset(tables):
-            raise RuntimeError("Backup does not contain the required GurGur schema.")
+        if not {"targets", "runs", "audit_events"}.issubset(tables):
+            raise RuntimeError("Backup does not contain the required legacy GurGur tables.")
     finally:
         connection.close()
     return {"valid": True, "sha256": actual, "size_bytes": source.stat().st_size}
