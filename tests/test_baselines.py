@@ -6,7 +6,8 @@ def event(source, kind, timestamp):
 
 
 def test_baseline_is_deterministic_and_groups_by_source_type():
-    events = [event("zeek", "connection", f"2026-01-01T00:0{i}:00Z") for i in range(6)]
+    timestamps = ["00:00", "00:05", "00:10", "00:15", "00:20", "00:25"]
+    events = [event("zeek", "connection", f"2026-01-01T{t}:00Z") for t in timestamps]
     assert analyze(events) == analyze(list(reversed(events)))
     result = analyze(events)
     assert result["series"][0]["bucket_count"] == 6
@@ -14,7 +15,7 @@ def test_baseline_is_deterministic_and_groups_by_source_type():
 
 
 def test_drift_requires_history_and_nonzero_median():
-    history = [event("zeek", "connection", f"2026-01-01T00:0{i}:00Z") for i in range(5)]
+    history = [event("zeek", "connection", f"2026-01-01T00:{m:02d}:00Z") for m in (0, 5, 10, 15, 20)]
     latest = [event("zeek", "connection", "2026-01-01T00:25:00Z") for _ in range(4)]
     result = analyze(history + latest)
     assert result["series"][0]["volume_drift_3x"] is True
