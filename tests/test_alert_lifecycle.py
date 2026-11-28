@@ -7,17 +7,17 @@ def auth(key: str) -> dict[str, str]:
 
 def create_alert(client, api_key):
     lines = [
-        "#separator \\x09",
-        "#fields\\tts\\tuid\\tid.orig_h\\tid.orig_p\\tid.resp_h\\tid.resp_p\\tproto",
+        "#separator \x09",
+        "#fields\tts\tuid\tid.orig_h\tid.orig_p\tid.resp_h\tid.resp_p\tproto",
     ]
     for index in range(20):
         lines.append(
-            f"1795860000.0\\tC{index}\\t10.0.0.10\\t50000\\t10.0.0.20\\t{1000 + index}\\ttcp"
+            f"1795860000.0\tC{index}\t10.0.0.10\t50000\t10.0.0.20\t{1000 + index}\ttcp"
         )
     uploaded = client.post(
         "/api/v1/telemetry/zeek?log_type=conn",
         headers={**auth(api_key), "Content-Type": "text/plain"},
-        content=("\\n".join(lines) + "\\n").encode(),
+        content=("\n".join(lines) + "\n").encode(),
     )
     assert uploaded.status_code == 201
     evaluated = client.post("/api/v1/detection/evaluate", headers=auth(api_key))
