@@ -6,6 +6,7 @@
   <meta name="color-scheme" content="dark">
   <title>ZYRAX — Network Intelligence & Defense Platform</title>
   <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/incidents.css">
 </head>
 <body>
 <header><div class="brand"><div class="mark">Z</div><div><strong>ZYRAX</strong><small>SEE BEYOND. DEFEND SMARTER.</small></div></div><div class="status" id="systemStatus">● LOCAL CONTROL PLANE</div></header>
@@ -42,8 +43,24 @@
     <div class="panel"><h2>04 / Recent experiments</h2><div id="runHistory" class="empty">No recorded runs yet.</div></div>
     <div class="panel"><h2>05 / Audit integrity</h2><div class="audit" id="auditStatus">Awaiting authenticated verification.</div><button class="btn secondary" id="verifyAudit" type="button">Verify audit chain</button></div>
   </section>
+
+  <section class="incident-workspace" id="incidentWorkspace" aria-labelledby="incidentTitle">
+    <div class="incident-heading"><div><div class="eyebrow">Investigation / Detection Operations</div><h2 id="incidentTitle">Incident Investigation Workspace</h2><p>Review explainable detections, preserve investigation context, and track analyst decisions.</p></div><button class="btn secondary" id="incidentRefresh" type="button">Refresh alerts</button></div>
+    <div class="incident-filters" aria-label="Alert filters">
+      <label>Status<select id="incidentStatus"><option value="">All statuses</option><option value="new">New</option><option value="acknowledged">Acknowledged</option><option value="investigating">Investigating</option><option value="resolved">Resolved</option></select></label>
+      <label>Severity<select id="incidentSeverity"><option value="">All severities</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></label>
+      <label>Classification<select id="incidentClassification"><option value="">All classifications</option><option value="undetermined">Undetermined</option><option value="true_positive">True positive</option><option value="false_positive">False positive</option><option value="benign">Benign</option></select></label>
+      <label>Search<input id="incidentSearch" type="search" maxlength="120" placeholder="Rule, subject, title…"></label>
+    </div>
+    <div class="incident-layout">
+      <section class="incident-list-panel" aria-label="Detection alerts"><div class="incident-list-head"><strong>Detection queue</strong><span id="incidentCount">0 alerts</span></div><div id="incidentList" class="incident-list"><div class="empty">Unlock the control plane to load alerts.</div></div></section>
+      <section class="incident-detail-panel" aria-label="Selected incident"><div id="incidentDetail" class="incident-empty">Select an alert to inspect its evidence and investigation history.</div></section>
+    </div>
+    <div class="incident-footnote">Investigation decisions are operator-controlled and audited. Detection findings are triage signals, not proof of malicious activity.</div>
+  </section>
   <div class="foot"><span>ZYRAX · LOCAL-FIRST · RESEARCH BUILD 0.1.0</span><span>NO PUBLIC TARGETING · NO TRAFFIC AMPLIFICATION · AUDIT TRAIL ENABLED</span></div>
 </main>
 <script src="/static/app.js" defer></script>
+<script src="/static/incidents.js" defer></script>
 </body>
 </html>
