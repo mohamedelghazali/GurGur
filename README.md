@@ -8,7 +8,7 @@
 *Engineered to See. Built to Defend.*
 
 **Network Intelligence & Defense Platform**  
-**Development version:** `0.3.0.dev0` — Core Hardening candidate  
+**Development version:** `0.3.0.dev0` — Network Telemetry & Sensor Ingestion candidate  
 **Latest baseline:** `0.1.0` — local-first MVP
 
 ZYRAX is a local-first network measurement and defense-research console for authorized private lab environments. It combines a FastAPI control plane, bounded asynchronous HTTP measurements, SQLite persistence, a tamper-evident audit trail, a browser dashboard, and Prometheus-format metrics.
