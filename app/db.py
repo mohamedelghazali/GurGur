@@ -100,6 +100,36 @@ class Store:
                     event_json TEXT NOT NULL,
                     UNIQUE(batch_id, ordinal)
                 );
+                CREATE TABLE IF NOT EXISTS detection_runs (
+                    id TEXT PRIMARY KEY,
+                    evaluated_at TEXT NOT NULL,
+                    ruleset_version TEXT NOT NULL,
+                    input_event_count INTEGER NOT NULL,
+                    alert_count INTEGER NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS detection_alerts (
+                    id TEXT PRIMARY KEY,
+                    fingerprint TEXT NOT NULL UNIQUE,
+                    rule_id TEXT NOT NULL,
+                    rule_version TEXT NOT NULL,
+                    ruleset_version TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    severity TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    rationale TEXT NOT NULL,
+                    source TEXT NOT NULL,
+                    subject TEXT NOT NULL,
+                    first_seen TEXT NOT NULL,
+                    last_seen TEXT NOT NULL,
+                    event_count INTEGER NOT NULL,
+                    evidence_json TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'open',
+                    last_run_id TEXT NOT NULL REFERENCES detection_runs(id),
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_detection_alerts_severity ON detection_alerts(severity, updated_at);
+                CREATE INDEX IF NOT EXISTS idx_detection_alerts_rule ON detection_alerts(rule_id, updated_at);
                 CREATE INDEX IF NOT EXISTS idx_telemetry_events_time ON telemetry_events(occurred_at);
                 CREATE INDEX IF NOT EXISTS idx_telemetry_events_type ON telemetry_events(event_type);
                 """
@@ -398,6 +428,106 @@ class Store:
                     "SELECT event_json FROM telemetry_events ORDER BY rowid DESC LIMIT ?", (limit,)
                 ).fetchall()
             return [json.loads(row["event_json"]) for row in rows]
+
+    def list_detection_input_events(self, limit: int = 5000) -> list[dict[str, Any]]:
+        """Return the newest bounded event slice in chronological order."""
+        with self._mutex:
+            rows = self.conn.execute(
+                """SELECT event_json FROM (
+                       SELECT rowid AS event_rowid, event_json
+                       FROM telemetry_events ORDER BY rowid DESC LIMIT ?
+                   ) ORDER BY event_rowid ASC""",
+                (limit,),
+            ).fetchall()
+            return [json.loads(row["event_json"]) for row in rows]
+
+    def persist_detection_results(
+        self, findings: list[dict[str, Any]], input_event_count: int, ruleset_version: str
+    ) -> dict[str, Any]:
+        """Persist one deterministic evaluation and upsert alerts by stable fingerprint."""
+        run_id = str(uuid.uuid4())
+        evaluated_at = utc_now()
+        with self._mutex:
+            self.conn.execute("BEGIN IMMEDIATE")
+            try:
+                self.conn.execute(
+                    "INSERT INTO detection_runs(id,evaluated_at,ruleset_version,input_event_count,alert_count) VALUES(?,?,?,?,?)",
+                    (run_id, evaluated_at, ruleset_version, input_event_count, len(findings)),
+                )
+                for finding in findings:
+                    alert_id = hashlib.sha256(finding["fingerprint"].encode("utf-8")).hexdigest()
+                    evidence_json = _canonical_json(finding["evidence"])
+                    self.conn.execute(
+                        """INSERT INTO detection_alerts(
+                               id,fingerprint,rule_id,rule_version,ruleset_version,title,severity,
+                               description,rationale,source,subject,first_seen,last_seen,event_count,
+                               evidence_json,status,last_run_id,created_at,updated_at
+                           ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                           ON CONFLICT(fingerprint) DO UPDATE SET
+                               rule_version=excluded.rule_version,
+                               ruleset_version=excluded.ruleset_version,
+                               title=excluded.title,
+                               severity=excluded.severity,
+                               description=excluded.description,
+                               rationale=excluded.rationale,
+                               source=excluded.source,
+                               last_seen=excluded.last_seen,
+                               event_count=excluded.event_count,
+                               evidence_json=excluded.evidence_json,
+                               last_run_id=excluded.last_run_id,
+                               updated_at=excluded.updated_at""",
+                        (
+                            alert_id, finding["fingerprint"], finding["rule_id"],
+                            finding["rule_version"], finding["ruleset_version"], finding["title"],
+                            finding["severity"], finding["description"], finding["rationale"],
+                            finding["source"], finding["subject"], finding["first_seen"],
+                            finding["last_seen"], finding["event_count"], evidence_json, "open",
+                            run_id, evaluated_at, evaluated_at,
+                        ),
+                    )
+                self._append_audit_tx(
+                    "detection.evaluation.completed",
+                    run_id,
+                    {
+                        "ruleset_version": ruleset_version,
+                        "input_event_count": input_event_count,
+                        "alert_count": len(findings),
+                        "rule_ids": sorted({item["rule_id"] for item in findings}),
+                    },
+                )
+                self.conn.commit()
+            except Exception:
+                self.conn.rollback()
+                raise
+        return {
+            "run_id": run_id,
+            "evaluated_at": evaluated_at,
+            "ruleset_version": ruleset_version,
+            "input_event_count": input_event_count,
+            "alert_count": len(findings),
+        }
+
+    def list_detection_alerts(
+        self, limit: int = 100, severity: str | None = None
+    ) -> list[dict[str, Any]]:
+        with self._mutex:
+            if severity:
+                rows = self.conn.execute(
+                    """SELECT * FROM detection_alerts WHERE severity=?
+                       ORDER BY updated_at DESC LIMIT ?""",
+                    (severity, limit),
+                ).fetchall()
+            else:
+                rows = self.conn.execute(
+                    "SELECT * FROM detection_alerts ORDER BY updated_at DESC LIMIT ?",
+                    (limit,),
+                ).fetchall()
+            results = []
+            for row in rows:
+                item = dict(row)
+                item["evidence"] = json.loads(item.pop("evidence_json"))
+                results.append(item)
+            return results
 
     def count_targets(self) -> int:
         with self._mutex:

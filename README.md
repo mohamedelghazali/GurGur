@@ -8,10 +8,10 @@
 *Engineered to See. Built to Defend.*
 
 **Network Intelligence & Defense Platform**  
-**Development version:** `0.3.0.dev0` — Network Telemetry & Sensor Ingestion candidate  
+**Development version:** `0.4.0.dev0` — Explainable Rule-Based Detection Engine candidate  
 **Latest baseline:** `0.1.0` — local-first MVP
 
-ZYRAX is a local-first network measurement and defense-research console for authorized private lab environments. It combines a FastAPI control plane, bounded asynchronous HTTP measurements, SQLite persistence, a tamper-evident audit trail, a browser dashboard, and Prometheus-format metrics.
+ZYRAX is a local-first network intelligence, detection, measurement, and defense-research console for authorized private lab environments. It combines a FastAPI control plane, bounded asynchronous HTTP measurements, SQLite persistence, a tamper-evident audit trail, a browser dashboard, and Prometheus-format metrics.
 
 > ZYRAX is a defensive lab tool, not an Internet DDoS generator. Active measurements are limited to explicitly registered loopback and RFC1918 IPv4 targets.
 
@@ -25,7 +25,7 @@ The long-term direction is an **Intelligent Network Threat Detection & Defense V
 - Network forensics with provenance, timelines, and integrity-verifiable evidence.
 - Human-controlled incident investigation, response documentation, and recovery verification.
 
-The current development line adds bounded, authenticated ingestion of Zeek conn/dns/http logs, Suricata EVE JSON, and offline Ethernet PCAP/PCAPNG metadata. See [Telemetry Ingestion](docs/TELEMETRY.md). Detection/anomaly models, incident management, and forensic acquisition remain planned. See [Target Architecture](docs/ARCHITECTURE.md) and [Product Roadmap](docs/ROADMAP.md).
+The current development line adds bounded Zeek/Suricata/PCAP ingestion and a deterministic, explainable rule-based detection engine. See [Telemetry Ingestion](docs/TELEMETRY.md) and [Detection Engine](docs/DETECTION.md). Statistical baselines, machine learning, incident management, and forensic acquisition remain deferred until representative reviewed data and explicit operational requirements exist.
 
 ## Safety envelope (server-enforced)
 
@@ -198,7 +198,7 @@ All `/api/*` routes and `/metrics` require `Authorization: Bearer <LAB_API_KEY>`
 | Method | Endpoint | Purpose |
 |---|---|---|
 | GET | `/health` | Minimal process health |
-| GET | `/api/v1/targets` | List registered targets |
+| GET | `/api/v1/detection/rules` | List versioned explainable detection rules |\n| POST | `/api/v1/detection/evaluate` | Evaluate the latest bounded telemetry slice |\n| GET | `/api/v1/detection/alerts` | List persisted detection alerts |\n| GET | `/api/v1/targets` | List registered targets |
 | POST | `/api/v1/targets` | Register a private target |
 | POST | `/api/v1/runs` | Atomically claim and start a bounded measurement |
 | GET | `/api/v1/runs` | Recent run history |
@@ -220,7 +220,7 @@ python -m compileall -q app tests
 python -m pytest -q --cov=app --cov-report=term-missing
 ```
 
-The 0.2 candidate was exercised in an isolated Python 3.11.2 environment: **44 tests passed, 0 failed, 77% application line coverage**. CLI smoke checks passed for API-key generation, online backup, backup verification, signed checkpoint creation/verification, and offline restore. GitHub Actions across Python 3.11/3.12/3.13 and the dependency audit remain separate release gates.
+The v0.4 development candidate is undergoing CI verification. See [the v0.4 verification report](docs/VERIFICATION_REPORT_0.4.0_DEV.md) for exact status; no test, coverage, or security result is claimed until it is observed on the candidate commit.
 
 This development iteration is self-contained within ZYRAX. It does not require external governance repositories or policy frameworks to build or run. A test pass is evidence for the tests actually executed, not a comprehensive security audit or production-readiness certification.
 
@@ -232,7 +232,7 @@ This development iteration is self-contained within ZYRAX. It does not require e
 - HMAC checkpoints require a shared secret and do not provide public-key non-repudiation.
 - No TLS server termination, remote bind profile, SSO, or production secrets manager.
 - No live packet capture sensor, flow export collector, IDS/IPS control, or host telemetry ingestion. PCAP parsing is offline and file-based.
-- No detection engine, behavioral baseline, anomaly model, incident case management, or forensic acquisition workflow.
+- No statistical behavioral baseline, machine-learning model, incident case management, or forensic acquisition workflow. Detection is currently deterministic and rule-based.
 - Docker build and Compose validation are not covered by the Python CI workflow.
 - No production readiness or comprehensive independent security assurance is claimed.
 
