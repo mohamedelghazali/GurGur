@@ -59,7 +59,7 @@ def test_supported_launcher_uses_loopback_by_default(monkeypatch):
     monkeypatch.delenv("LAB_CONTAINER_MODE", raising=False)
     monkeypatch.setattr(launcher.uvicorn, "run", lambda *args, **kwargs: called.update(kwargs))
 
-    launcher.main()
+    launcher.main([])
 
     assert called["host"] == "127.0.0.1"
     assert called["port"] == 8000

@@ -173,7 +173,7 @@ def test_signed_audit_checkpoint_round_trip_and_tamper_detection(client, api_key
     assert verified.json()["checkpoint_head_present"] is True
 
     altered = dict(checkpoint)
-    altered["head_hash"] = "0" * 64
+    altered["signature"] = ("0" if checkpoint["signature"][0] != "0" else "1") + checkpoint["signature"][1:]
     rejected = client.post(
         "/api/v1/audit/checkpoints/verify",
         headers=auth(api_key),
