@@ -236,6 +236,7 @@
     finally { state.busy = false; $('incidentRefresh').disabled = false; }
   }
   $('incidentRefresh').addEventListener('click', () => refreshAlerts());
+  $('saveKey').addEventListener('click', () => refreshAlerts(false));
   for (const id of ['incidentStatus', 'incidentSeverity', 'incidentClassification']) {
     $(id).addEventListener('change', () => refreshAlerts(false));
   }
