@@ -124,6 +124,21 @@ No statistical anomaly scoring, adaptive thresholds, ML model, automatic blockin
 - No changes to the existing active measurement safety envelope.
 - Independent review before treating the engine as operationally trusted.
 
+## v0.4.1 — Alert Lifecycle and Investigation Foundation
+
+**Goal:** make each detection alert an auditable, reviewable investigation record.
+
+Implemented candidate scope:
+- Alert statuses: new, acknowledged, investigating, resolved, with controlled reopening.
+- Analyst classifications: true positive, false positive, benign, undetermined.
+- Alert detail with bounded evidence and chronological activity.
+- Investigation notes (maximum 2,000 characters).
+- Status/classification filters and explicit transition validation.
+- Transactional SQLite activity persistence and hash-linked audit events.
+- Schema migration for existing detection alert databases.
+
+**Exit criteria:** lifecycle/API tests, migration tests, authentication and invalid-transition tests, audit-chain verification, and green CI across supported Python versions.
+
 ## v0.5.0 — Defense Validation and Incident Response
 
 **Goal:** connect detections to safe, human-controlled investigation and defense assessment.
