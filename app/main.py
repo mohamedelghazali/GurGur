@@ -16,6 +16,7 @@ from .db import Store, utc_now
 from .engine import BoundedTrafficEngine, safe_target_summary
 from .safety import validate_private_target, validate_target_url
 from .schemas import AuditCheckpoint, RunCreate, StopResponse, TargetCreate
+from .telemetry import MAX_PCAP_BYTES, MAX_TEXT_BYTES, TelemetryInputError, parse_pcap, parse_suricata, parse_zeek, source_digest
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -46,7 +47,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application = FastAPI(
         title="ZYRAX API",
-        version="0.2.0.dev0",
+        version="0.3.0.dev0",
         description="Bounded traffic measurement and defensive telemetry for private lab targets.",
         docs_url=None,
         redoc_url=None,
@@ -86,11 +87,84 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @application.get("/health", tags=["system"])
     async def health() -> dict[str, str]:
-        return {"status": "ok", "service": "zyrax", "version": "0.2.0.dev0"}
+        return {"status": "ok", "service": "zyrax", "version": "0.3.0.dev0"}
 
     @application.get("/", include_in_schema=False)
     async def dashboard():
         return FileResponse(BASE_DIR / "static" / "index.html")
+
+    async def _read_bounded_upload(request: Request, maximum: int) -> bytes:
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                if int(content_length) > maximum:
+                    raise HTTPException(status_code=413, detail="Upload exceeds the configured size limit.")
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail="Invalid Content-Length header.") from exc
+        body = bytearray()
+        async for chunk in request.stream():
+            body.extend(chunk)
+            if len(body) > maximum:
+                raise HTTPException(status_code=413, detail="Upload exceeds the configured size limit.")
+        if not body:
+            raise HTTPException(status_code=400, detail="Empty telemetry upload.")
+        return bytes(body)
+
+    @application.post("/api/v1/telemetry/zeek", status_code=201)
+    async def ingest_zeek(request: Request, log_type: str = "conn") -> dict[str, Any]:
+        media = request.headers.get("content-type", "").split(";")[0].strip()
+        if media not in {"text/plain", "application/octet-stream"}:
+            raise HTTPException(status_code=415, detail="Use text/plain or application/octet-stream.")
+        data = await _read_bounded_upload(request, MAX_TEXT_BYTES)
+        try:
+            events = parse_zeek(data, log_type)
+            if not events:
+                raise TelemetryInputError("No supported Zeek records were found.")
+            return request.app.state.store.ingest_telemetry("zeek", source_digest(data), events)
+        except TelemetryInputError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @application.post("/api/v1/telemetry/suricata", status_code=201)
+    async def ingest_suricata(request: Request) -> dict[str, Any]:
+        media = request.headers.get("content-type", "").split(";")[0].strip()
+        if media not in {"application/x-ndjson", "application/json", "text/plain"}:
+            raise HTTPException(status_code=415, detail="Use application/x-ndjson, application/json, or text/plain.")
+        data = await _read_bounded_upload(request, MAX_TEXT_BYTES)
+        try:
+            events = parse_suricata(data)
+            if not events:
+                raise TelemetryInputError("No supported Suricata EVE events were found.")
+            return request.app.state.store.ingest_telemetry("suricata", source_digest(data), events)
+        except TelemetryInputError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @application.post("/api/v1/telemetry/pcap", status_code=201)
+    async def ingest_pcap(request: Request) -> dict[str, Any]:
+        media = request.headers.get("content-type", "").split(";")[0].strip()
+        if media != "application/vnd.tcpdump.pcap":
+            raise HTTPException(status_code=415, detail="Use application/vnd.tcpdump.pcap.")
+        data = await _read_bounded_upload(request, MAX_PCAP_BYTES)
+        try:
+            events = parse_pcap(data)
+            if not events:
+                raise TelemetryInputError("No supported Ethernet IP packets were found in the capture.")
+            return request.app.state.store.ingest_telemetry("pcap", source_digest(data), events)
+        except TelemetryInputError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @application.get("/api/v1/telemetry/batches")
+    async def list_telemetry_batches(request: Request, limit: int = 50) -> list[dict[str, Any]]:
+        if not 1 <= limit <= 100:
+            raise HTTPException(status_code=422, detail="limit must be between 1 and 100.")
+        return request.app.state.store.list_telemetry_batches(limit)
+
+    @application.get("/api/v1/telemetry/events")
+    async def list_telemetry_events(request: Request, limit: int = 100, source: str | None = None) -> list[dict[str, Any]]:
+        if not 1 <= limit <= 500:
+            raise HTTPException(status_code=422, detail="limit must be between 1 and 500.")
+        if source not in {None, "zeek", "suricata", "pcap"}:
+            raise HTTPException(status_code=422, detail="Unsupported telemetry source.")
+        return request.app.state.store.list_telemetry_events(limit, source)
 
     @application.get("/api/v1/targets")
     async def list_targets(request: Request) -> list[dict[str, Any]]:

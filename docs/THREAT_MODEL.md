@@ -112,10 +112,21 @@ HMAC uses a shared secret. A verifier must possess the secret, and any party hol
 - HMAC checkpoints are only as trustworthy as the shared signing secret and checkpoint storage.
 - Application logging is not yet a complete security-event monitoring pipeline.
 - The engine measures HTTP request behavior; it is not packet-level capture or a full IDS.
-- Zeek/Suricata, detection rules, baseline learning, incident response, and forensic acquisition remain planned.
+- Live sensor control, detection rules, baseline learning, incident response, and forensic acquisition remain planned. File-based Zeek/Suricata/PCAP metadata ingestion is present; it does not start sensors or transmit captured traffic.
 - No production remote-access deployment is supported.
 - No comprehensive independent security review, Docker build validation, or production recovery drill is claimed by the current test run.
 
 ## 10. Deployment assumptions
 
 Run under a dedicated unprivileged OS account. Keep the database, WAL/SHM files, run-lock file, backups, and checkpoint files in directories inaccessible to untrusted users. Keep secrets in protected environment/secret configuration and never commit them. Bind only to loopback. Use an isolated private lab network, retain operator authorization for every target, and stop experiments if the target shows degradation.
+
+
+## 11. Telemetry ingestion (v0.3)
+
+- Imports require the existing Bearer API key and accept request bodies only; clients cannot submit arbitrary filesystem paths.
+- Text uploads are capped at 16 MiB and 10,000 normalized events. PCAP/PCAPNG uploads are capped at 64 MiB and 100,000 packets.
+- PCAP parsing supports Ethernet link type and extracts IPv4/IPv6 packet metadata. It does not retain payload bytes, open sockets, replay packets, or transmit traffic.
+- Zeek and Suricata adapters retain only selected metadata fields; raw input files and payload-bearing fields are not persisted.
+- Source digest and batch identity provide idempotency for identical source bytes. A different file with the same semantic events is a distinct import.
+- Telemetry event records can still contain operationally sensitive IP addresses, DNS names, hostnames, SNI, alert signatures, and flow metadata. Restrict API/database access and define retention before operational deployment.
+- There is no automatic deletion/retention policy or sensor heartbeat in this development increment.

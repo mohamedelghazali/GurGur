@@ -283,3 +283,8 @@ These are upstream documentation references for future implementation; their inc
 - [OpenTelemetry HTTP metrics semantic conventions](https://opentelemetry.io/docs/specs/semconv/http/http-metrics/)
 - [OWASP Application Security Verification Standard](https://owasp.org/www-project-application-security-verification-standard/)
 - [NIST SP 800-61 Rev. 3 — Incident Response Recommendations](https://csrc.nist.gov/pubs/sp/800/61/r3/final)
+
+
+## Telemetry ingestion (v0.3 development)
+
+The local API accepts operator-supplied Zeek TSV, Suricata EVE JSON Lines, and offline Ethernet PCAP/PCAPNG files. Adapters normalize metadata into schema version 1 events and persist immutable import batches plus event records in SQLite. A source SHA-256 digest makes repeat uploads idempotent; batch creation is included in the existing audit hash chain. The PCAP parser is a passive offline file parser: it opens no network sockets, transmits no packets, and omits packet payloads. Current limits are 16 MiB / 10,000 records for text and 64 MiB / 100,000 packets for captures. No live sensor control or detection engine is included.

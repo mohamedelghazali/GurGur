@@ -8,7 +8,7 @@
 *Engineered to See. Built to Defend.*
 
 **Network Intelligence & Defense Platform**  
-**Development version:** `0.2.0.dev0` — Core Hardening candidate  
+**Development version:** `0.3.0.dev0` — Core Hardening candidate  
 **Latest baseline:** `0.1.0` — local-first MVP
 
 ZYRAX is a local-first network measurement and defense-research console for authorized private lab environments. It combines a FastAPI control plane, bounded asynchronous HTTP measurements, SQLite persistence, a tamper-evident audit trail, a browser dashboard, and Prometheus-format metrics.
@@ -25,7 +25,7 @@ The long-term direction is an **Intelligent Network Threat Detection & Defense V
 - Network forensics with provenance, timelines, and integrity-verifiable evidence.
 - Human-controlled incident investigation, response documentation, and recovery verification.
 
-The current development line is focused on hardening the local measurement core. Zeek/Suricata ingestion, PCAP parsing, flow ingestion, detection/anomaly models, incident management, and forensic acquisition are still planned, not shipped. See [Target Architecture](docs/ARCHITECTURE.md) and [Product Roadmap](docs/ROADMAP.md).
+The current development line adds bounded, authenticated ingestion of Zeek conn/dns/http logs, Suricata EVE JSON, and offline Ethernet PCAP/PCAPNG metadata. See [Telemetry Ingestion](docs/TELEMETRY.md). Detection/anomaly models, incident management, and forensic acquisition remain planned. See [Target Architecture](docs/ARCHITECTURE.md) and [Product Roadmap](docs/ROADMAP.md).
 
 ## Safety envelope (server-enforced)
 
@@ -79,7 +79,7 @@ ZYRAX intentionally contains no public-target mode, arbitrary request method/pat
 - Optional detached HMAC-SHA256 audit checkpoints using a dedicated key separate from the API key.
 - Backward-compatible opening and migration of 0.1 database files.
 
-The current application still does not include Zeek or Suricata adapters, PCAP/flow ingestion, a detection engine, behavioral baselines, incident management, or forensic acquisition.
+The current application includes Zeek, Suricata EVE JSON, and offline PCAP/PCAPNG metadata ingestion. It does not yet include a detection engine, behavioral baselines, incident management, or forensic acquisition.
 
 ## Requirements
 
@@ -231,7 +231,7 @@ This development iteration is self-contained within ZYRAX. It does not require e
 - Restore requires every process using the database to be stopped by the operator.
 - HMAC checkpoints require a shared secret and do not provide public-key non-repudiation.
 - No TLS server termination, remote bind profile, SSO, or production secrets manager.
-- No packet capture, flow ingestion, Zeek/Suricata integration, IDS/IPS integration, or host telemetry ingestion.
+- No live packet capture sensor, flow export collector, IDS/IPS control, or host telemetry ingestion. PCAP parsing is offline and file-based.
 - No detection engine, behavioral baseline, anomaly model, incident case management, or forensic acquisition workflow.
 - Docker build and Compose validation are not covered by the Python CI workflow.
 - No production readiness or comprehensive independent security assurance is claimed.

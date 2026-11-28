@@ -83,6 +83,25 @@ class Store:
                     owner_token TEXT NOT NULL,
                     acquired_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS telemetry_batches (
+                    id TEXT PRIMARY KEY,
+                    source TEXT NOT NULL,
+                    source_digest TEXT NOT NULL,
+                    imported_at TEXT NOT NULL,
+                    event_count INTEGER NOT NULL,
+                    UNIQUE(source, source_digest)
+                );
+                CREATE TABLE IF NOT EXISTS telemetry_events (
+                    id TEXT PRIMARY KEY,
+                    batch_id TEXT NOT NULL REFERENCES telemetry_batches(id) ON DELETE CASCADE,
+                    ordinal INTEGER NOT NULL,
+                    occurred_at TEXT,
+                    event_type TEXT NOT NULL,
+                    event_json TEXT NOT NULL,
+                    UNIQUE(batch_id, ordinal)
+                );
+                CREATE INDEX IF NOT EXISTS idx_telemetry_events_time ON telemetry_events(occurred_at);
+                CREATE INDEX IF NOT EXISTS idx_telemetry_events_type ON telemetry_events(event_type);
                 """
             )
             columns = {row["name"] for row in self.conn.execute("PRAGMA table_info(runs)")}
@@ -322,6 +341,63 @@ class Store:
                 "SELECT run_id FROM run_control WHERE singleton=1"
             ).fetchone()
             return str(row["run_id"]) if row else None
+
+    def ingest_telemetry(self, source: str, digest: str, events: list[dict[str, Any]]) -> dict[str, Any]:
+        """Persist one immutable import batch; identical source bytes are idempotent."""
+        batch_id = str(uuid.uuid4())
+        imported_at = utc_now()
+        with self._mutex:
+            self.conn.execute("BEGIN IMMEDIATE")
+            try:
+                existing = self.conn.execute(
+                    "SELECT id,event_count,imported_at FROM telemetry_batches WHERE source=? AND source_digest=?",
+                    (source, digest),
+                ).fetchone()
+                if existing:
+                    self.conn.commit()
+                    return {"batch_id": str(existing["id"]), "event_count": int(existing["event_count"]),
+                            "imported_at": str(existing["imported_at"]), "duplicate": True}
+                self.conn.execute(
+                    "INSERT INTO telemetry_batches(id,source,source_digest,imported_at,event_count) VALUES(?,?,?,?,?)",
+                    (batch_id, source, digest, imported_at, len(events)),
+                )
+                for ordinal, event in enumerate(events):
+                    self.conn.execute(
+                        "INSERT INTO telemetry_events(id,batch_id,ordinal,occurred_at,event_type,event_json) VALUES(?,?,?,?,?,?)",
+                        (hashlib.sha256(f"{batch_id}:{ordinal}".encode()).hexdigest(), batch_id,
+                         ordinal, event.get("timestamp"), event["event_type"], _canonical_json(event)),
+                    )
+                self._append_audit_tx("telemetry.batch.ingested", batch_id,
+                                      {"source": source, "source_digest": digest, "event_count": len(events)})
+                self.conn.commit()
+                return {"batch_id": batch_id, "event_count": len(events),
+                        "imported_at": imported_at, "duplicate": False}
+            except Exception:
+                self.conn.rollback()
+                raise
+
+    def list_telemetry_batches(self, limit: int = 50) -> list[dict[str, Any]]:
+        with self._mutex:
+            rows = self.conn.execute(
+                "SELECT id,source,source_digest,imported_at,event_count FROM telemetry_batches ORDER BY imported_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    def list_telemetry_events(self, limit: int = 100, source: str | None = None) -> list[dict[str, Any]]:
+        with self._mutex:
+            if source:
+                rows = self.conn.execute(
+                    """SELECT e.event_json FROM telemetry_events e
+                       JOIN telemetry_batches b ON b.id=e.batch_id
+                       WHERE b.source=? ORDER BY e.rowid DESC LIMIT ?""",
+                    (source, limit),
+                ).fetchall()
+            else:
+                rows = self.conn.execute(
+                    "SELECT event_json FROM telemetry_events ORDER BY rowid DESC LIMIT ?", (limit,)
+                ).fetchall()
+            return [json.loads(row["event_json"]) for row in rows]
 
     def count_targets(self) -> int:
         with self._mutex:
