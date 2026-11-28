@@ -309,3 +309,8 @@ API:
 - `GET /api/v1/detection/alerts`
 
 The ruleset is read-only in this milestone. No user-supplied rule expressions or dynamic execution are supported. No model inference, live capture, sensor control, packet transmission, or automatic response is part of this component.
+
+
+## Alert investigation lifecycle (v0.4.1)
+
+Persisted detection alerts are managed independently from immutable telemetry batches. An alert fingerprint remains the deduplication key; repeated evaluation refreshes detection evidence without resetting operator lifecycle status or classification. The investigation layer stores a bounded activity timeline, including status/classification changes and operator notes. State changes, notes, and their audit-chain records are committed transactionally. The API exposes alert detail, filtered lists, controlled state transitions, and note creation. The current shared API key provides authentication but not per-human identity or RBAC.
