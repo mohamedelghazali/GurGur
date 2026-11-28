@@ -128,7 +128,19 @@ class Store:
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS detection_alert_activity (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    alert_id TEXT NOT NULL REFERENCES detection_alerts(id) ON DELETE CASCADE,
+                    activity_type TEXT NOT NULL,
+                    old_status TEXT,
+                    new_status TEXT,
+                    old_classification TEXT,
+                    new_classification TEXT,
+                    note TEXT,
+                    created_at TEXT NOT NULL
+                );
                 CREATE INDEX IF NOT EXISTS idx_detection_alerts_severity ON detection_alerts(severity, updated_at);
+                CREATE INDEX IF NOT EXISTS idx_detection_alert_activity_alert ON detection_alert_activity(alert_id, id);
                 CREATE INDEX IF NOT EXISTS idx_detection_alerts_rule ON detection_alerts(rule_id, updated_at);
                 CREATE INDEX IF NOT EXISTS idx_telemetry_events_time ON telemetry_events(occurred_at);
                 CREATE INDEX IF NOT EXISTS idx_telemetry_events_type ON telemetry_events(event_type);
@@ -139,6 +151,12 @@ class Store:
                 self.conn.execute(
                     "ALTER TABLE runs ADD COLUMN stop_requested INTEGER NOT NULL DEFAULT 0"
                 )
+            alert_columns = {row["name"] for row in self.conn.execute("PRAGMA table_info(detection_alerts)")}
+            if "classification" not in alert_columns:
+                self.conn.execute("ALTER TABLE detection_alerts ADD COLUMN classification TEXT NOT NULL DEFAULT 'undetermined'")
+            if "closed_at" not in alert_columns:
+                self.conn.execute("ALTER TABLE detection_alerts ADD COLUMN closed_at TEXT")
+            self.conn.execute("UPDATE detection_alerts SET status='new' WHERE status='open'")
             self.conn.commit()
 
     def close(self) -> None:
@@ -481,7 +499,7 @@ class Store:
                             finding["rule_version"], finding["ruleset_version"], finding["title"],
                             finding["severity"], finding["description"], finding["rationale"],
                             finding["source"], finding["subject"], finding["first_seen"],
-                            finding["last_seen"], finding["event_count"], evidence_json, "open",
+                            finding["last_seen"], finding["event_count"], evidence_json, "new",
                             run_id, evaluated_at, evaluated_at,
                         ),
                     )
@@ -508,26 +526,121 @@ class Store:
         }
 
     def list_detection_alerts(
-        self, limit: int = 100, severity: str | None = None
+        self,
+        limit: int = 100,
+        severity: str | None = None,
+        status: str | None = None,
+        classification: str | None = None,
     ) -> list[dict[str, Any]]:
+        clauses: list[str] = []
+        values: list[Any] = []
+        for column, value in (("severity", severity), ("status", status), ("classification", classification)):
+            if value is not None:
+                clauses.append(f"{column}=?")
+                values.append(value)
+        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
         with self._mutex:
-            if severity:
-                rows = self.conn.execute(
-                    """SELECT * FROM detection_alerts WHERE severity=?
-                       ORDER BY updated_at DESC LIMIT ?""",
-                    (severity, limit),
-                ).fetchall()
-            else:
-                rows = self.conn.execute(
-                    "SELECT * FROM detection_alerts ORDER BY updated_at DESC LIMIT ?",
-                    (limit,),
-                ).fetchall()
+            rows = self.conn.execute(
+                f"SELECT * FROM detection_alerts{where} ORDER BY updated_at DESC LIMIT ?",
+                (*values, limit),
+            ).fetchall()
             results = []
             for row in rows:
                 item = dict(row)
                 item["evidence"] = json.loads(item.pop("evidence_json"))
                 results.append(item)
             return results
+
+    def get_detection_alert(self, alert_id: str) -> dict[str, Any] | None:
+        with self._mutex:
+            row = self.conn.execute(
+                "SELECT * FROM detection_alerts WHERE id=?", (alert_id,)
+            ).fetchone()
+            if not row:
+                return None
+            item = dict(row)
+            item["evidence"] = json.loads(item.pop("evidence_json"))
+            item["activity"] = [
+                dict(entry) for entry in self.conn.execute(
+                    "SELECT id,activity_type,old_status,new_status,old_classification,new_classification,note,created_at "
+                    "FROM detection_alert_activity WHERE alert_id=? ORDER BY id ASC",
+                    (alert_id,),
+                ).fetchall()
+            ]
+            return item
+
+    def update_detection_alert(
+        self, alert_id: str, status: str, classification: str
+    ) -> dict[str, Any] | None:
+        now = utc_now()
+        with self._mutex:
+            self.conn.execute("BEGIN IMMEDIATE")
+            try:
+                row = self.conn.execute(
+                    "SELECT status,classification FROM detection_alerts WHERE id=?",
+                    (alert_id,),
+                ).fetchone()
+                if not row:
+                    self.conn.rollback()
+                    return None
+                old_status, old_classification = str(row["status"]), str(row["classification"])
+                closed_at = now if status == "resolved" else None
+                self.conn.execute(
+                    "UPDATE detection_alerts SET status=?,classification=?,closed_at=?,updated_at=? WHERE id=?",
+                    (status, classification, closed_at, now, alert_id),
+                )
+                if old_status != status or old_classification != classification:
+                    self.conn.execute(
+                        """INSERT INTO detection_alert_activity(
+                               alert_id,activity_type,old_status,new_status,
+                               old_classification,new_classification,created_at
+                           ) VALUES(?,?,?,?,?,?,?)""",
+                        (alert_id, "status_changed", old_status, status,
+                         old_classification, classification, now),
+                    )
+                    self._append_audit_tx(
+                        "detection.alert.updated", alert_id,
+                        {"old_status": old_status, "new_status": status,
+                         "old_classification": old_classification,
+                         "new_classification": classification},
+                    )
+                self.conn.commit()
+            except Exception:
+                self.conn.rollback()
+                raise
+        return self.get_detection_alert(alert_id)
+
+    def add_detection_alert_note(self, alert_id: str, note: str) -> dict[str, Any] | None:
+        now = utc_now()
+        with self._mutex:
+            self.conn.execute("BEGIN IMMEDIATE")
+            try:
+                exists = self.conn.execute(
+                    "SELECT 1 FROM detection_alerts WHERE id=?", (alert_id,)
+                ).fetchone()
+                if not exists:
+                    self.conn.rollback()
+                    return None
+                self.conn.execute(
+                    """INSERT INTO detection_alert_activity(
+                           alert_id,activity_type,note,created_at
+                       ) VALUES(?,?,?,?)""",
+                    (alert_id, "note_added", note, now),
+                )
+                self.conn.execute(
+                    "UPDATE detection_alerts SET updated_at=? WHERE id=?",
+                    (now, alert_id),
+                )
+                self._append_audit_tx(
+                    "detection.alert.note_added", alert_id,
+                    {"note_sha256": hashlib.sha256(note.encode("utf-8")).hexdigest(),
+                     "note_length": len(note)},
+                )
+                self.conn.commit()
+            except Exception:
+                self.conn.rollback()
+                raise
+        return self.get_detection_alert(alert_id)
 
     def count_targets(self) -> int:
         with self._mutex:

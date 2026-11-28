@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "zyrax"
-version = "0.4.0.dev0"
+version = "0.4.1.dev0"
 description = "ZYRAX: explainable network threat detection and offline defense research platform"
 requires-python = ">=3.11,<3.14"
 dependencies = [

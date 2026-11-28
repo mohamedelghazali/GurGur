@@ -48,7 +48,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application = FastAPI(
         title="ZYRAX API",
-        version="0.4.0.dev0",
+        version="0.4.1.dev0",
         description="Bounded private-network measurement, telemetry ingestion, and explainable threat detection.",
         docs_url=None,
         redoc_url=None,
@@ -88,7 +88,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @application.get("/health", tags=["system"])
     async def health() -> dict[str, str]:
-        return {"status": "ok", "service": "zyrax", "version": "0.4.0.dev0"}
+        return {"status": "ok", "service": "zyrax", "version": "0.4.1.dev0"}
 
     @application.get("/", include_in_schema=False)
     async def dashboard():
@@ -192,13 +192,75 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @application.get("/api/v1/detection/alerts")
     async def list_detection_alerts(
-        request: Request, limit: int = 100, severity: str | None = None
+        request: Request,
+        limit: int = 100,
+        severity: str | None = None,
+        status: str | None = None,
+        classification: str | None = None,
     ) -> list[dict[str, Any]]:
         if not 1 <= limit <= 500:
             raise HTTPException(status_code=422, detail="limit must be between 1 and 500.")
         if severity not in {None, "critical", "high", "medium", "low"}:
             raise HTTPException(status_code=422, detail="Unsupported severity filter.")
-        return request.app.state.store.list_detection_alerts(limit, severity)
+        if status not in {None, "new", "acknowledged", "investigating", "resolved"}:
+            raise HTTPException(status_code=422, detail="Unsupported status filter.")
+        if classification not in {None, "true_positive", "false_positive", "benign", "undetermined"}:
+            raise HTTPException(status_code=422, detail="Unsupported classification filter.")
+        return request.app.state.store.list_detection_alerts(
+            limit, severity, status, classification
+        )
+
+    @application.get("/api/v1/detection/alerts/{alert_id}")
+    async def get_detection_alert(alert_id: str, request: Request) -> dict[str, Any]:
+        alert = request.app.state.store.get_detection_alert(alert_id)
+        if not alert:
+            raise HTTPException(status_code=404, detail="Detection alert not found.")
+        return alert
+
+    @application.patch("/api/v1/detection/alerts/{alert_id}")
+    async def update_detection_alert(
+        alert_id: str, payload: dict[str, Any], request: Request
+    ) -> dict[str, Any]:
+        store: Store = request.app.state.store
+        current = store.get_detection_alert(alert_id)
+        if not current:
+            raise HTTPException(status_code=404, detail="Detection alert not found.")
+        if set(payload) - {"status", "classification"}:
+            raise HTTPException(status_code=422, detail="Only status and classification may be updated.")
+        status = payload.get("status", current["status"])
+        classification = payload.get("classification", current["classification"])
+        statuses = {"new", "acknowledged", "investigating", "resolved"}
+        classifications = {"true_positive", "false_positive", "benign", "undetermined"}
+        if not isinstance(status, str) or status not in statuses:
+            raise HTTPException(status_code=422, detail="Unsupported alert status.")
+        if not isinstance(classification, str) or classification not in classifications:
+            raise HTTPException(status_code=422, detail="Unsupported alert classification.")
+        transitions = {
+            "new": {"acknowledged", "investigating", "resolved"},
+            "acknowledged": {"new", "investigating", "resolved"},
+            "investigating": {"new", "acknowledged", "resolved"},
+            "resolved": {"new"},
+        }
+        if status != current["status"] and status not in transitions[current["status"]]:
+            raise HTTPException(status_code=409, detail="Invalid alert status transition.")
+        updated = store.update_detection_alert(alert_id, status, classification)
+        if not updated:
+            raise HTTPException(status_code=404, detail="Detection alert not found.")
+        return updated
+
+    @application.post("/api/v1/detection/alerts/{alert_id}/notes", status_code=201)
+    async def add_detection_alert_note(
+        alert_id: str, payload: dict[str, Any], request: Request
+    ) -> dict[str, Any]:
+        if set(payload) != {"note"} or not isinstance(payload.get("note"), str):
+            raise HTTPException(status_code=422, detail="Provide only a note string.")
+        note = payload["note"].strip()
+        if not note or len(note) > 2000:
+            raise HTTPException(status_code=422, detail="Note must contain 1 to 2,000 characters.")
+        result = request.app.state.store.add_detection_alert_note(alert_id, note)
+        if not result:
+            raise HTTPException(status_code=404, detail="Detection alert not found.")
+        return result
 
     @application.get("/api/v1/targets")
     async def list_targets(request: Request) -> list[dict[str, Any]]:

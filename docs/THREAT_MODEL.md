@@ -142,3 +142,8 @@ Run under a dedicated unprivileged OS account. Keep the database, WAL/SHM files,
 - Rule thresholds are conservative initial defaults and are not universal detection signatures. Operators must review rule output against local traffic patterns before operational use.
 - No statistical baseline, machine-learning inference, automated containment, firewall modification, blocking, or disruptive response is included. Future models require representative reviewed data, documented labels/limitations, measured false-positive behavior, and human approval.
 - Detection evaluation and alert persistence are transactional and recorded in the existing hash-linked audit history. Protect the database and backups because alert evidence can include sensitive internal addresses and DNS metadata.
+
+
+## Alert investigation data (v0.4.1)
+
+Investigation notes and classifications may contain sensitive operational context. Notes are limited to 2,000 characters and are stored in the local SQLite database; backups therefore inherit this sensitivity. The audit chain records note hashes and lengths rather than copying note bodies. API access remains protected by the shared Bearer key, but the current single-operator model cannot attribute actions to distinct humans. Do not treat an authenticated API-key action as proof of an individual identity. Alert status transitions are validated by the API; database administrators with direct file access remain inside the local trust boundary. No automated containment or network modification is performed.
