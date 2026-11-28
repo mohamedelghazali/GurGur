@@ -192,13 +192,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @application.get("/api/v1/detection/alerts")
     async def list_detection_alerts(
-        request: Request, limit: int = 100, severity: str | None = None
+        request: Request,
+        limit: int = 100,
+        severity: str | None = None,
+        status: str | None = None,
+        classification: str | None = None,
     ) -> list[dict[str, Any]]:
         if not 1 <= limit <= 500:
             raise HTTPException(status_code=422, detail="limit must be between 1 and 500.")
         if severity not in {None, "critical", "high", "medium", "low"}:
             raise HTTPException(status_code=422, detail="Unsupported severity filter.")
-        return request.app.state.store.list_detection_alerts(limit, severity)
+        if status not in {None, "new", "acknowledged", "investigating", "resolved"}:
+            raise HTTPException(status_code=422, detail="Unsupported status filter.")
+        if classification not in {None, "true_positive", "false_positive", "benign", "undetermined"}:
+            raise HTTPException(status_code=422, detail="Unsupported classification filter.")
+        return request.app.state.store.list_detection_alerts(
+            limit, severity, status, classification
+        )
 
     @application.get("/api/v1/detection/alerts/{alert_id}")
     async def get_detection_alert(alert_id: str, request: Request) -> dict[str, Any]:
