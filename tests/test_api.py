@@ -155,3 +155,75 @@ def test_dashboard_uses_text_safe_dom_rendering(client):
     assert ".innerHTML" not in response.text
     assert "textContent" in response.text
     assert "createElement" in response.text
+
+
+def test_signed_audit_checkpoint_round_trip_and_tamper_detection(client, api_key):
+    created = client.post("/api/v1/audit/checkpoints", headers=auth(api_key))
+    assert created.status_code == 201
+    checkpoint = created.json()
+
+    verified = client.post(
+        "/api/v1/audit/checkpoints/verify",
+        headers=auth(api_key),
+        json=checkpoint,
+    )
+    assert verified.status_code == 200
+    assert verified.json()["valid"] is True
+    assert verified.json()["signature_valid"] is True
+    assert verified.json()["checkpoint_head_present"] is True
+
+    altered = dict(checkpoint)
+    altered["signature"] = ("0" if checkpoint["signature"][0] != "0" else "1") + checkpoint["signature"][1:]
+    rejected = client.post(
+        "/api/v1/audit/checkpoints/verify",
+        headers=auth(api_key),
+        json=altered,
+    )
+    assert rejected.status_code == 200
+    assert rejected.json()["valid"] is False
+
+
+def test_run_lock_is_shared_between_app_instances(tmp_path, api_key, target_server):
+    from fastapi.testclient import TestClient
+
+    from app.config import Settings
+    from app.main import create_app
+
+    database = tmp_path / "shared-workers.sqlite3"
+    settings = Settings(api_key=api_key, database_path=database)
+    first_app = create_app(settings)
+    second_app = create_app(settings)
+
+    with TestClient(first_app) as first, TestClient(second_app) as second:
+        target = register_target(first, api_key, port=target_server).json()
+        payload = {
+            "target_id": target["id"],
+            "requests_per_second": 1,
+            "duration_seconds": 5,
+            "concurrency": 1,
+        }
+        started = first.post("/api/v1/runs", headers=auth(api_key), json=payload)
+        assert started.status_code == 202
+
+        conflict = second.post("/api/v1/runs", headers=auth(api_key), json=payload)
+        assert conflict.status_code == 409
+
+        stopped = second.post(
+            f"/api/v1/runs/{started.json()['id']}/stop",
+            headers=auth(api_key),
+        )
+        assert stopped.status_code == 200
+        assert stopped.json()["status"] == "stopping"
+
+        deadline = time.monotonic() + 3
+        record = None
+        while time.monotonic() < deadline:
+            record = second.get(
+                f"/api/v1/runs/{started.json()['id']}",
+                headers=auth(api_key),
+            ).json()
+            if record["status"] in {"completed", "stopped", "failed"}:
+                break
+            time.sleep(0.05)
+        assert record is not None
+        assert record["status"] == "stopped"

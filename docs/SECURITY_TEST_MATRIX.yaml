@@ -1,87 +1,101 @@
-version: 1
+version: 2
 project: gurgur
-status_note: "Runner observations describe this uncommitted workspace snapshot. Governance status remains NOT_VERIFIED until evidence is bound to a Git commit and independently assessed."
+baseline: "0.2.0.dev0"
+verification_snapshot:
+  commit: "67254209572c320968a69db52c64b041b5769701"
+  python: "3.11.2"
+  compileall: PASS
+  test_command: "python -m pytest -q --cov=app --cov-report=term-missing"
+  tests_passed: 44
+  tests_failed: 0
+  tests_skipped: 0
+  application_line_coverage_percent: 77
+  cli_smoke: PASS
+  cli_checks: [keygen, backup_create, backup_verify, audit_checkpoint, audit_checkpoint_verify, offline_restore, post_restore_backup_verify]
+  filesystem_permissions_observed: {database: "0600", data_directory: "0700"}
+  warning: "StarletteDeprecationWarning: httpx usage with starlette.testclient is deprecated."
+  github_actions_matrix: PENDING
+  dependency_audit: PENDING
+  docker_compose_validation: NOT_RUN
+status_note: "Project-local verification only. Candidate commit 67254209572c320968a69db52c64b041b5769701. External governance repositories and frameworks are not required for development or verification."
 scenarios:
-  - id: SE-SEC-001-authentication
-    scenario: unauthenticated_and_invalid_bearer_access
-    disposition: applicable
-    test: tests/test_api.py::test_api_requires_bearer_key
-    observed_test_result: PASS
-    governance_status: NOT_VERIFIED
-  - id: SE-SEC-002-ownership
-    scenario: unknown_run_identifier_access
-    disposition: partial
-    test: tests/test_api.py::test_unknown_run_id_is_not_disclosed
-    observed_test_result: PASS
-    governance_status: NOT_VERIFIED
-    note: "Single-operator profile; per-user and tenant ownership are not implemented."
-  - id: SE-SEC-003-input
-    scenario: hostile_label_and_invalid_payload
-    disposition: applicable
-    test: tests/test_api.py::test_target_label_validation_rejects_markup_and_sql_fragments
-    observed_test_result: PASS
-    governance_status: NOT_VERIFIED
-  - id: SE-SEC-004-network-scope
-    scenario: public_address_dns_name_and_out_of_scope_target
-    disposition: applicable
-    test: tests/test_safety.py;tests/test_api.py::test_public_target_is_rejected;tests/test_api.py::test_dns_hostname_is_rejected
-    observed_test_result: PASS
-    governance_status: NOT_VERIFIED
-  - id: SE-SEC-004-transport
-    scenario: tls_certificate_validation_and_redirect_suppression
-    disposition: applicable
-    test: not_yet_implemented
-    governance_status: NOT_VERIFIED
-  - id: SE-SEC-005-secrets
-    scenario: api_key_not_embedded_in_source_or_logs
-    disposition: applicable
-    test: not_yet_implemented
-    governance_status: NOT_VERIFIED
-  - id: SE-SEC-006-rate-control
-    scenario: run_budget_abuse_and_concurrent_run_abuse
-    disposition: applicable
-    test: tests/test_api.py::test_run_budget_is_validated_server_side;tests/test_api.py::test_second_run_is_rejected_while_a_run_is_active
-    observed_test_result: PASS
-    governance_status: NOT_VERIFIED
-  - id: SE-SEC-007-audit
-    scenario: audit_chain_verification_and_tamper_detection
-    disposition: applicable
-    test: tests/test_api.py::test_registered_local_target_can_be_measured_and_audited;tests/test_api.py::test_audit_chain_detects_modified_event
-    observed_test_result: PASS
-    governance_status: NOT_VERIFIED
-  - id: SE-SEC-008-dependencies
-    scenario: dependency_vulnerability_and_license_review
-    disposition: applicable
-    test: not_yet_run
-    governance_status: NOT_VERIFIED
-  - id: SE-SEC-009-exposure
-    scenario: unsafe_remote_bind_and_dashboard_headers
-    disposition: applicable
-    test: tests/test_safety.py::test_configuration_refuses_non_loopback_bind;tests/test_safety.py::test_supported_launcher_uses_loopback_by_default;tests/test_api.py::test_dashboard_sends_baseline_security_headers
-    observed_test_result: PASS
-    governance_status: NOT_VERIFIED
-  - id: SE-SEC-010-history
-    scenario: secret_leakage_in_git_history
-    disposition: applicable
-    test: not_yet_run
-    governance_status: NOT_VERIFIED
-  - id: SE-DB-002-sql
-    scenario: parameterized_database_queries
-    disposition: applicable
-    test: code_review_only
-    governance_status: NOT_VERIFIED
-  - id: SE-OBS-003-logs
-    scenario: diagnostic_log_redaction_and_crash_dump_governance
-    disposition: partial
-    test: not_yet_implemented
-    governance_status: NOT_VERIFIED
-  - id: SE-TST-004-csrf
-    scenario: csrf_on_cookie_authenticated_mutation
-    disposition: not_applicable
-    governance_status: NOT_APPLICABLE
-    rationale: "No cookie-based authentication or browser session is used; API uses an Authorization bearer header and does not enable CORS."
-  - id: SE-TST-004-tenant-isolation
-    scenario: cross_tenant_read_write_isolation
-    disposition: not_applicable
-    governance_status: NOT_APPLICABLE
-    rationale: "No tenant or user model exists in this single-operator local MVP; multi-user deployment is out of scope and blocked."
+  - id: NET-001-target-scope
+    scenario: reject_public_dns_ipv6_link_local_and_out_of-scope_targets
+    tests:
+      - tests/test_safety.py
+      - tests/test_api.py::test_public_target_is_rejected
+      - tests/test_api.py::test_dns_hostname_is_rejected
+    observed_result: PASS
+  - id: RUN-001-atomic-single-run
+    scenario: only_one_active_run_per_shared_local_database
+    tests:
+      - tests/test_db.py::test_run_claim_is_atomic_and_stale_rows_are_recoverable
+      - tests/test_locking.py::test_run_lock_is_exclusive_across_processes_and_released_on_exit
+      - tests/test_api.py::test_run_lock_is_shared_between_app_instances
+    observed_result: PASS
+  - id: RUN-002-owner-crash-recovery
+    scenario: stale_active_run_recovered_only_after_kernel_lock_is_released
+    tests:
+      - tests/test_db.py::test_run_claim_is_atomic_and_stale_rows_are_recoverable
+      - tests/test_locking.py::test_run_lock_is_released_when_owner_process_terminates
+    observed_result: PASS
+  - id: RUN-003-cross-worker-stop
+    scenario: one_worker_can_request_stop_for_run_owned_by_another_worker
+    tests:
+      - tests/test_api.py::test_run_lock_is_shared_between_app_instances
+    observed_result: PASS
+  - id: AUTH-001-bearer-auth
+    scenario: missing_invalid_and_non_ascii_bearer_tokens_are_rejected
+    tests:
+      - tests/test_api.py::test_api_requires_bearer_key
+      - tests/test_api.py::test_non_ascii_bearer_header_is_rejected_without_server_error
+    observed_result: PASS
+  - id: AUTH-002-key-lifecycle
+    scenario: generate_high_entropy_key_and_rotate_by_restarting_with_new_environment_value
+    tests:
+      - tests/test_safety.py::test_configuration_requires_strong_api_key
+    operational_command: "python -m app keygen"
+    observed_result: CLI_SMOKE_PASS
+  - id: DB-001-backup-integrity
+    scenario: online_backup_sha256_integrity_and_foreign_key_validation
+    tests:
+      - tests/test_db.py::test_online_backup_verify_and_restore_preserve_consistent_state
+      - tests/test_db.py::test_backup_checksum_detects_modified_artifact
+    observed_result: PASS
+  - id: DB-002-legacy-restore
+    scenario: accept_v01_backup_and_migrate_schema_on_open
+    tests:
+      - tests/test_db.py::test_v01_backup_restores_and_migrates_to_v02_schema
+    observed_result: PASS
+  - id: AUD-001-hash-chain
+    scenario: tamper_detection_for_hash_linked_audit_history
+    tests:
+      - tests/test_api.py::test_audit_chain_detects_modified_event
+      - tests/test_api.py::test_registered_local_target_can_be_measured_and_audited
+    observed_result: PASS
+  - id: AUD-002-detached-checkpoint
+    scenario: hmac_checkpoint_verification_and_tamper_detection
+    tests:
+      - tests/test_audit.py::test_hmac_checkpoint_detects_tampering_and_key_mismatch
+      - tests/test_api.py::test_signed_audit_checkpoint_round_trip_and_tamper_detection
+    observed_result: PASS
+  - id: LIMIT-001-traffic-bounds
+    scenario: preserve_fixed_private_target_workload_and_hard_limits
+    tests:
+      - tests/test_api.py::test_run_budget_is_validated_server_side
+      - tests/test_safety.py
+    observed_result: PASS
+  - id: DEPLOY-001-loopback
+    scenario: refuse_remote_bind_and_keep_dashboard_security_headers
+    tests:
+      - tests/test_safety.py::test_configuration_refuses_non_loopback_bind
+      - tests/test_safety.py::test_supported_launcher_uses_loopback_by_default
+      - tests/test_api.py::test_dashboard_sends_baseline_security_headers
+    observed_result: PASS
+unverified_gates:
+  - GitHub Actions Python 3.11/3.12/3.13 matrix
+  - GitHub Actions dependency vulnerability audit
+  - Docker build and Compose validation
+  - Independent application security review
+  - Multi-host database/lock coordination (unsupported)
+  - Production deployment readiness

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -17,6 +18,8 @@ class Settings:
     max_requests_per_run: int = 300
     request_timeout_seconds: float = 2.0
     max_response_bytes: int = 16_384
+    audit_signing_key: str | None = None
+    audit_signing_key_id: str = "local-v1"
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -24,7 +27,7 @@ class Settings:
         if len(api_key) < 32:
             raise RuntimeError(
                 "LAB_API_KEY is required and must contain at least 32 characters. "
-                "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+                "Generate one with: python -m app keygen"
             )
 
         container_mode = os.getenv("LAB_CONTAINER_MODE", "0").strip() == "1"
@@ -34,7 +37,7 @@ class Settings:
                     "Container mode requires LAB_CONTAINER_BIND_ACK=127.0.0.1. "
                     "The supplied Compose file publishes the host port on loopback only."
                 )
-            bind_host = "0.0.0.0"  # container interface; Compose publishes only on host loopback
+            bind_host = "0.0.0.0"
         else:
             bind_host = os.getenv("LAB_BIND_HOST", "127.0.0.1").strip()
             if bind_host not in {"127.0.0.1", "localhost"}:
@@ -43,13 +46,25 @@ class Settings:
                     "a separately reviewed authenticated deployment profile is required for remote access."
                 )
 
-        bind_port = int(os.getenv("LAB_BIND_PORT", "8000"))
+        try:
+            bind_port = int(os.getenv("LAB_BIND_PORT", "8000"))
+        except ValueError as exc:
+            raise RuntimeError("LAB_BIND_PORT must be an integer.") from exc
         if not 1024 <= bind_port <= 65535:
             raise RuntimeError("LAB_BIND_PORT must be between 1024 and 65535.")
+
+        audit_key = os.getenv("LAB_AUDIT_SIGNING_KEY", "").strip() or None
+        audit_key_id = os.getenv("LAB_AUDIT_SIGNING_KEY_ID", "local-v1").strip()
+        if audit_key is not None and len(audit_key.encode("utf-8")) < 32:
+            raise RuntimeError("LAB_AUDIT_SIGNING_KEY must contain at least 32 UTF-8 bytes.")
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", audit_key_id):
+            raise RuntimeError("LAB_AUDIT_SIGNING_KEY_ID must be 1-64 safe ASCII characters.")
 
         return cls(
             api_key=api_key,
             database_path=Path(os.getenv("LAB_DATABASE_PATH", "./data/gurgur.sqlite3")),
             bind_host=bind_host,
             bind_port=bind_port,
+            audit_signing_key=audit_key,
+            audit_signing_key_id=audit_key_id,
         )

@@ -1,16 +1,16 @@
 # GurGur
 
 **Network Research & Defense Lab**  
-**Current version:** 0.1.0 — local-first MVP  
-**Next planned milestone:** 0.2.0 — Core Hardening
+**Development version:** `0.2.0.dev0` — Core Hardening candidate  
+**Latest baseline:** `0.1.0` — local-first MVP
 
-GurGur is a local-first, controlled network measurement and defense-research console. The current MVP provides a FastAPI control plane, a bounded asynchronous HTTP measurement engine, SQLite persistence, a hash-linked audit trail, a browser dashboard, and Prometheus-format metrics.
+GurGur is a local-first network measurement and defense-research console for authorized private lab environments. It combines a FastAPI control plane, bounded asynchronous HTTP measurements, SQLite persistence, a tamper-evident audit trail, a browser dashboard, and Prometheus-format metrics.
 
-> GurGur is a defensive lab tool, not an Internet DDoS generator. Active measurements are limited to registered loopback and RFC1918 IPv4 targets.
+> GurGur is a defensive lab tool, not an Internet DDoS generator. Active measurements are limited to explicitly registered loopback and RFC1918 IPv4 targets.
 
 ## Product direction
 
-The long-term direction is an **Intelligent Network Threat Detection & Defense Validation Platform** with five capabilities:
+The long-term direction is an **Intelligent Network Threat Detection & Defense Validation Platform** with five connected capabilities:
 
 - Network telemetry ingestion from authorized sensors and service logs.
 - Explainable threat detection using tested rules and measured behavioral baselines.
@@ -18,7 +18,7 @@ The long-term direction is an **Intelligent Network Threat Detection & Defense V
 - Network forensics with provenance, timelines, and integrity-verifiable evidence.
 - Human-controlled incident investigation, response documentation, and recovery verification.
 
-This is the product direction, not a description of features already shipped. The current 0.1.0 release does **not** yet include Zeek or Suricata adapters, PCAP import, flow ingestion, a detection/anomaly engine, incident management, or forensic acquisition. See [Target Architecture](docs/ARCHITECTURE.md) and [Product Roadmap](docs/ROADMAP.md).
+The current development line is focused on hardening the local measurement core. Zeek/Suricata ingestion, PCAP parsing, flow ingestion, detection/anomaly models, incident management, and forensic acquisition are still planned, not shipped. See [Target Architecture](docs/ARCHITECTURE.md) and [Product Roadmap](docs/ROADMAP.md).
 
 ## Safety envelope (server-enforced)
 
@@ -37,30 +37,49 @@ This is the product direction, not a description of features already shipped. Th
 | Per-request timeout | 2 seconds (1 second connect timeout) |
 | Response consumption | Capped at 16 KiB per request |
 | Registered targets | 100 maximum |
-| Active runs | One per process in the current implementation |
+| Active runs | One per shared local database and run-lock file |
 | Supported launch bind | Loopback by default; Compose publishes the host port on loopback |
 
 The engine schedules requests for no longer than the configured duration, then allows up to 3 seconds to drain in-flight requests. The operator must own the target or hold explicit written authorization. Keep experiments on an isolated lab VLAN or private test network. Start with the smallest useful measurements; the configured ceilings are hard limits, not recommended default workloads.
 
-The current active-run lock is process-local. Do not deploy multiple application workers or replicas until durable cross-process run coordination is implemented and verified.
+### Run coordination boundary
+
+The 0.2 development line combines a non-blocking OS-level lock file with a singleton `run_control` row in SQLite. This prevents another GurGur worker on the same host from claiming a run while the active owner holds the OS lock. Run claims and audit events are committed transactionally. A stopped/crashed owner releases the kernel lock; the next worker can then mark stale queued/running rows as failed and recover the control row. Stop requests are persisted so another worker can request a stop for a run it does not own.
+
+This supports multiple GurGur processes that share the **same local database path and local filesystem lock semantics**. It does not provide multi-host coordination, NFS/distributed filesystem guarantees, or a multi-tenant execution model. Keep the database and `.run.lock` file on the same trusted local filesystem.
 
 GurGur intentionally contains no public-target mode, arbitrary request method/path, proxy/VPN rotation, source spoofing, packet crafting, reflection, amplification, distributed traffic-generation agents, botnet/C2 behavior, or evasion features. Broader detection scenarios should use offline event/PCAP replay rather than higher live traffic rates.
 
-## Current capabilities (0.1.0)
+## Current capabilities
 
-- FastAPI control plane with bearer-key authentication.
+### Measurement and control plane
+
+- FastAPI local control plane with Bearer API-key authentication.
 - Browser dashboard served by the application.
-- SQLite storage for registered targets, run summaries, and hash-linked audit events.
+- SQLite storage for registered targets, run summaries, persistent run coordination, and hash-linked audit events.
 - Bounded asynchronous HTTP measurements using the fixed request profile.
+- Cross-worker stop requests and stale-run recovery after process exit.
 - Prometheus-format metrics endpoint.
-- Local health endpoint and baseline browser security headers.
+- Baseline browser security headers and non-cacheable authenticated API responses.
+
+### Core hardening (0.2 development line)
+
+- Cross-process single-run exclusion using an OS lock file plus an atomic SQLite claim.
+- Transactional creation/finish of runs and audit events.
+- Consistent online SQLite backups with SHA-256 sidecars and database integrity checks.
+- Backup verification and offline restore; restore creates a pre-restore backup where a database already exists.
+- API-key generation command and a documented environment-based rotation procedure.
+- Optional detached HMAC-SHA256 audit checkpoints using a dedicated key separate from the API key.
+- Backward-compatible opening and migration of 0.1 database files.
+
+The current application still does not include Zeek or Suricata adapters, PCAP/flow ingestion, a detection engine, behavioral baselines, incident management, or forensic acquisition.
 
 ## Requirements
 
 - Python 3.11–3.13.
 - Network access only to the explicitly registered local/private lab service.
 
-## Run locally
+## Install and run locally
 
 PowerShell:
 
@@ -70,43 +89,100 @@ py -3.13 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -e ".[test]"
-$env:LAB_API_KEY = (python -c "import secrets; print(secrets.token_urlsafe(32))")
+$env:LAB_API_KEY = (python -m app keygen)
 $env:LAB_DATABASE_PATH = ".\data\gurgur.sqlite3"
 python -m app
 ```
-
-Open `http://127.0.0.1:8000`, paste the generated API key into the dashboard, and select **Unlock**. Register a target that is listening on a private/loopback address and a port from 1024 to 65535. Start with 1–2 requests/second for 5 seconds.
 
 Linux/macOS:
 
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
+python -m pip install --upgrade pip
 pip install -e '.[test]'
-export LAB_API_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+export LAB_API_KEY="$(python -m app keygen)"
 export LAB_DATABASE_PATH="./data/gurgur.sqlite3"
 python -m app
 ```
 
-`LAB_API_KEY` is mandatory and must be at least 32 characters. Do not commit it or put it in screenshots. The dashboard keeps it in browser `sessionStorage` for the current tab session only. The dashboard uses a same-origin Content Security Policy and baseline anti-framing/content-sniffing headers.
+Open `http://127.0.0.1:8000`, enter the generated API key, and select **Unlock**. Register a target that is listening on a private/loopback address and a port from 1024 to 65535. Start with 1–2 requests/second for 5 seconds.
 
-## Run tests
+`LAB_API_KEY` is mandatory and must contain at least 32 characters. Do not commit it or put it in screenshots. The dashboard keeps it in browser `sessionStorage` for the current tab only.
+
+## API-key rotation
+
+GurGur currently uses one shared operator API key supplied through `LAB_API_KEY`; there is no multi-key registry or user/RBAC model.
+
+1. Generate a replacement with `python -m app keygen`.
+2. Update the protected environment or secret configuration used by every GurGur worker.
+3. Stop and restart all workers/containers so every process loads the new value.
+4. Re-enter the new key in the dashboard. The old key is rejected by the restarted application.
+
+The key is not stored in the SQLite database. Rotation requires a process restart; changing the environment of a running process does not rotate its in-memory key.
+
+## Database backup, verification, and restore
+
+Create an online, WAL-consistent backup while GurGur is running:
 
 ```bash
-python -m pytest -q --cov=app --cov-report=term-missing
+python -m app backup create --output ./backups/gurgur-2026-11-28.sqlite3
 ```
 
-The integration test starts a local HTTP fixture on `127.0.0.1` and exercises target registration, the actual request engine, persisted run results, and audit-chain verification.
+Verify the SHA-256 sidecar, SQLite integrity, foreign-key consistency, and GurGur schema:
+
+```bash
+python -m app backup verify --input ./backups/gurgur-2026-11-28.sqlite3
+```
+
+Restore is an offline maintenance operation. Stop **every** GurGur process/container using the database, then explicitly confirm:
+
+```bash
+python -m app backup restore --input ./backups/gurgur-2026-11-28.sqlite3 --confirm-offline
+```
+
+The restore command rejects execution without `--confirm-offline`, verifies the source backup first, and creates a timestamped pre-restore backup if the current database exists. Protect backups as sensitive operational data: they can include private target IP addresses, run metadata, and audit history.
+
+Backups made with the 0.1 schema remain restorable; opening the restored file with 0.2 code applies the required schema migration. Restore must not be run while any worker is using the database.
+
+## Detached audit checkpoints (optional)
+
+The audit chain is hash-linked and detects ordinary record tampering, but a local administrator able to rewrite the full database can recompute the chain. The 0.2 line can create a detached HMAC-SHA256 checkpoint that anchors the current chain prefix outside the database.
+
+Generate a separate random key (do not reuse `LAB_API_KEY`), then configure:
+
+```bash
+export LAB_AUDIT_SIGNING_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
+export LAB_AUDIT_SIGNING_KEY_ID="local-v1"
+```
+
+Create a checkpoint file and verify it later:
+
+```bash
+python -m app audit checkpoint --output ./audit-checkpoints/audit-head.json
+python -m app audit verify-checkpoint --input ./audit-checkpoints/audit-head.json --database-check
+```
+
+Keep the signing key in a protected secret store or protected operator environment and store checkpoint files separately from the database. HMAC is a **symmetric** message-authentication mechanism: a verifier needs the shared secret, and anyone who obtains that secret can create a valid checkpoint. It is not an asymmetric public-key signature and does not provide non-repudiation. Key rotation requires retaining the old key and its key ID in protected offline records to verify old checkpoints.
+
+Authenticated API endpoints are also available:
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/api/v1/audit/checkpoints` | Create a detached HMAC checkpoint |
+| POST | `/api/v1/audit/checkpoints/verify` | Verify checkpoint signature and local chain prefix |
+
+These endpoints require `LAB_AUDIT_SIGNING_KEY` to be configured.
 
 ## Container run (optional)
 
-Set `LAB_API_KEY` in the shell or in a local, uncommitted `.env` file, then run:
+Set `LAB_API_KEY` in the shell or a local, uncommitted `.env` file, then run:
 
 ```bash
 docker compose up --build
 ```
 
-The supplied Compose mapping publishes `8000` on host loopback only (`127.0.0.1:8000`). Docker is not required for local development. Container build and Compose validation must be performed on the target host before relying on this path; the earlier MVP release report marked those checks as not verified.
+The supplied Compose mapping publishes `8000` on host loopback only (`127.0.0.1:8000`). Docker is not required for local development. Docker build and Compose validation must be performed on the target host before relying on this path.
 
 ## API surface
 
@@ -114,64 +190,43 @@ All `/api/*` routes and `/metrics` require `Authorization: Bearer <LAB_API_KEY>`
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| GET | `/health` | Non-sensitive process health |
+| GET | `/health` | Minimal process health |
 | GET | `/api/v1/targets` | List registered targets |
 | POST | `/api/v1/targets` | Register a private target |
-| POST | `/api/v1/runs` | Start a bounded measurement |
+| POST | `/api/v1/runs` | Atomically claim and start a bounded measurement |
 | GET | `/api/v1/runs` | Recent run history |
-| GET | `/api/v1/runs/{id}` | Run result and live counters |
-| POST | `/api/v1/runs/{id}/stop` | Request stop |
+| GET | `/api/v1/runs/{id}` | Run result and persisted progress |
+| POST | `/api/v1/runs/{id}/stop` | Persist a stop request, including across workers |
 | GET | `/api/v1/audit/verify` | Verify the stored hash chain |
+| POST | `/api/v1/audit/checkpoints` | Create a signed checkpoint |
+| POST | `/api/v1/audit/checkpoints/verify` | Verify a checkpoint |
 | GET | `/metrics` | Prometheus text metrics |
 
-Interactive OpenAPI docs are disabled in this MVP to reduce exposed surface.
+Interactive OpenAPI documentation remains disabled to reduce exposed surface.
 
-## Current architecture
+## Development and verification
 
-```text
-Browser dashboard
-      | bearer-authenticated HTTP
-      v
-FastAPI control plane ------> SQLite (targets / runs / audit events)
-      |
-      v
-Bounded asynchronous HTTP engine
-      | fixed GET /; <=10 RPS; <=5 concurrent; <=30 s
-      v
-Registered loopback / RFC1918 lab service
+Run the application tests:
+
+```bash
+python -m compileall -q app tests
+python -m pytest -q --cov=app --cov-report=term-missing
 ```
 
-The planned architecture adds passive telemetry adapters (Zeek, Suricata, reverse-proxy logs), normalized event ingestion, explainable detection, incident correlation, forensic evidence workflows, and operator-controlled defense validation. These components are described as future work in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); they are not part of the current application.
+The 0.2 candidate was exercised in an isolated Python 3.11.2 environment: **44 tests passed, 0 failed, 77% application line coverage**. CLI smoke checks passed for API-key generation, online backup, backup verification, signed checkpoint creation/verification, and offline restore. GitHub Actions across Python 3.11/3.12/3.13 and the dependency audit remain separate release gates.
 
-## Roadmap
-
-| Release | Focus | Status |
-|---|---|---|
-| 0.1.0 | Local-first bounded measurement MVP | Implemented baseline |
-| 0.2.0 | Core hardening: durable run coordination, key lifecycle, audit checkpoint design, backup/restore, reliability tests | Planned — next |
-| 0.3.0 | Zeek/Suricata/reverse-proxy ingestion and offline PCAP replay | Planned |
-| 0.4.0 | Explainable rules, baselines, anomaly scoring, detection evaluation | Planned |
-| 0.5.0 | Defense validation, incident workflow, forensic reports, recovery metrics | Planned |
-| 1.0.0 | Multi-operator/RBAC, PostgreSQL, TLS/SSO, governed sensor operations | Planned, gated |
-
-See [docs/ROADMAP.md](docs/ROADMAP.md) for milestone scope and acceptance criteria. No delivery dates are implied.
-
-## Governance and verification status
-
-GurGur declares GENCODE-GOV and AIGENT-SEC as engineering/security references. This documentation update consulted the repository's agent instructions, engineering charter, applicable GENCODE-GOV security/reliability/testing rules, and AIGENT-SEC v1.2.0 core directives and selected API, application-security, logging, data-handling, testing, detection, and forensics rules.
-
-No GENCODE-GOV CLI assessment, full AIGENT-SEC security audit, independent human security review, production deployment review, or restore drill is claimed for this documentation change. Those items remain **NOT VERIFIED** unless a commit-bound report says otherwise. A green CI run proves only the checks actually executed by that workflow.
+This development iteration is self-contained within GurGur. It does not require external governance repositories or policy frameworks to build or run. A test pass is evidence for the tests actually executed, not a comprehensive security audit or production-readiness certification.
 
 ## Known limitations
 
-- Local, single-operator lab profile only; no multi-user identity, RBAC, or tenant model.
-- No remote bind, HTTPS server termination, SSO, or production secrets manager.
-- The current active-run lock is process-local and does not coordinate multiple application workers.
+- Single shared operator API key; no multi-user identity, RBAC, or tenant isolation.
+- Local database and OS-lock coordination only; no multi-host/distributed locking guarantee.
+- Restore requires every process using the database to be stopped by the operator.
+- HMAC checkpoints require a shared secret and do not provide public-key non-repudiation.
+- No TLS server termination, remote bind profile, SSO, or production secrets manager.
 - No packet capture, flow ingestion, Zeek/Suricata integration, IDS/IPS integration, or host telemetry ingestion.
 - No detection engine, behavioral baseline, anomaly model, incident case management, or forensic acquisition workflow.
-- Audit chain has no external signed checkpoint; an administrator able to rewrite the complete database can recompute hashes.
-- Run data currently remains in SQLite without a verified automated backup/restore rotation.
-- Docker build and Compose validation are not established by the repository's Python CI workflow.
-- No production readiness or comprehensive security assurance is claimed.
+- Docker build and Compose validation are not covered by the Python CI workflow.
+- No production readiness or comprehensive independent security assurance is claimed.
 
-Use `python -m app` as the local launcher; do not override it with a public Uvicorn bind address. Direct Uvicorn CLI overrides can bypass the launcher-level bind check and are unsupported. The supplied Docker Compose profile binds the host-side port to `127.0.0.1` and requires an explicit container-mode acknowledgement. Do not expose this build to the public Internet. A production server profile requires a separate security design, independent verification, and human approval.
+Use `python -m app` as the local launcher; do not override it with a public Uvicorn bind address. Direct Uvicorn CLI overrides can bypass the launcher-level bind check and are unsupported. Do not expose this build to the public Internet. A production server profile requires a separate security design, independent verification, and human approval.
