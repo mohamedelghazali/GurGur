@@ -25,7 +25,7 @@ The long-term direction is an **Intelligent Network Threat Detection & Defense V
 - Network forensics with provenance, timelines, and integrity-verifiable evidence.
 - Human-controlled incident investigation, response documentation, and recovery verification.
 
-The current development line adds bounded Zeek/Suricata/PCAP ingestion and a deterministic, explainable rule-based detection engine. See [Telemetry Ingestion](docs/TELEMETRY.md) and [Detection Engine](docs/DETECTION.md). Statistical baselines, machine learning, incident management, and forensic acquisition remain deferred until representative reviewed data and explicit operational requirements exist.
+The current development line adds bounded Zeek/Suricata/PCAP ingestion and a deterministic, explainable rule-based detection engine. See [Telemetry Ingestion](docs/TELEMETRY.md) and [Detection Engine](docs/DETECTION.md). Statistical baselines, machine learning, multi-user RBAC, and forensic acquisition remain deferred until representative reviewed data and explicit operational requirements exist.
 
 ## Safety envelope (server-enforced)
 
@@ -240,3 +240,23 @@ This development iteration is self-contained within ZYRAX. It does not require e
 - No production readiness or comprehensive independent security assurance is claimed.
 
 Use `python -m app` as the local launcher; do not override it with a public Uvicorn bind address. Direct Uvicorn CLI overrides can bypass the launcher-level bind check and are unsupported. Do not expose this build to the public Internet. A production server profile requires a separate security design, independent verification, and human approval.
+
+
+## Incident Investigation Workspace
+
+The browser dashboard includes an authenticated investigation workspace backed by the detection alert API:
+
+- Filter the queue by lifecycle status, severity, and analyst classification; search the loaded results by rule, subject, title, or source.
+- Inspect rule rationale, source metadata, event counts, timestamps, bounded structured evidence, and the stable alert fingerprint.
+- Update lifecycle status and classification through the existing audited API.
+- Add investigation notes and review the chronological activity timeline.
+- Refresh is operator initiated; the workspace does not poll continuously or trigger detection evaluation automatically.
+
+Open the dashboard at `http://127.0.0.1:8000`, unlock it with the configured API key, and scroll to **Incident Investigation Workspace**. The queue reads up to 200 alerts per request. Use the existing authenticated endpoints:
+
+- `GET /api/v1/detection/alerts`
+- `GET /api/v1/detection/alerts/{alert_id}`
+- `PATCH /api/v1/detection/alerts/{alert_id}`
+- `POST /api/v1/detection/alerts/{alert_id}/notes`
+
+The interface uses the existing shared Bearer key and does not introduce user identity or per-analyst RBAC. Notes and status/classification changes are persisted by the server and included in the alert activity/audit workflow. Evidence is rendered as text; the interface does not execute or interpret imported event content as HTML.
