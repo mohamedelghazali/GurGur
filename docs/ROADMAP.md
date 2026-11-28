@@ -1,8 +1,8 @@
 # ZYRAX — Product Roadmap
 
 **Latest stable baseline:** `0.1.0`  
-**Current development line:** `0.3.0.dev0` — Network Telemetry & Sensor Ingestion  
-**Status:** v0.2 implementation is in the development branch; release qualification is pending.
+**Current development line:** `0.4.0.dev0` — Explainable Rule-Based Detection Engine  
+**Status:** v0.4 development candidate; CI and release qualification are pending.
 
 ## Product objective
 
@@ -89,21 +89,55 @@ Baseline limitation: the active-run lock was process-local; backup/restore and d
 
 **Exit criteria:** positive/negative fixtures for every adapter; malformed and oversized input rejection; deterministic offline parsing; duplicate batch idempotency; audit-chain continuity; CI and dependency audit green.
 
-## v0.4.0 — Explainable Detection Engine
+## v0.4.0 — Explainable Rule-Based Detection Engine
 
-**Goal:** detect measurable behavior deviations with testable, operator-understandable evidence.
+**Implemented candidate scope:** a deterministic rules engine operating only on normalized, persisted telemetry. Evaluation is explicit and bounded to the latest 5,000 stored events; it does not generate traffic, run sensors, or perform automatic response.
 
-Planned capabilities:
+### Initial ruleset 1.0.0
 
-- Versioned rules with event dependencies, aggregation windows, thresholds, severity, rationale, owner, and runbook.
-- Deterministic rules for traffic-rate deviations, latency/error spikes, connection patterns, and DNS anomalies.
-- Per-service or per-network baselines with bounded windows.
-- Positive/negative fixtures, regression corpus, tuning, and suppression expiry.
-- Evaluation reporting for false positives and, where labelled data exists, precision/recall.
+- **SUR-001 — Suricata alert observed:** preserve sensor signature, category, source/destination evidence, and map Suricata severity (1 critical, 2 high, 3 medium, other low).
+- **NET-001 — High destination-port diversity:** at least 20 distinct destination ports from one source in a fixed 60-second UTC bucket.
+- **NET-002 — High destination-address fan-out:** at least 30 distinct destination IPs from one source in a fixed 60-second UTC bucket.
+- **DNS-001 — DNS NXDOMAIN burst:** at least 10 NXDOMAIN responses from one source in a fixed five-minute UTC bucket.
+- **DNS-002 — High DNS query-name diversity:** at least 50 distinct query names from one source in a fixed five-minute UTC bucket.
 
-Statistical anomaly scoring may be added only after reliable telemetry and representative labelled/reviewed data exist. An anomaly score is a triage signal, not proof of malicious intent.
+Every rule includes a stable ID/version, severity, threshold, description, rationale, and supported sources. Alerts retain bounded evidence and deterministic fingerprints. Thresholds are conservative starting points, not universal indicators of compromise; benign monitoring, resolvers, proxies, and inventory tools can trigger similar signals.
 
-**Exit criteria:** each shipped rule has tests, a runbook, measurable false-positive behavior, a stable version, and an accountable owner.
+### API and persistence
+
+- `GET /api/v1/detection/rules` returns the read-only rules catalogue.
+- `POST /api/v1/detection/evaluate?limit=5000` explicitly evaluates the latest bounded event slice.
+- `GET /api/v1/detection/alerts?limit=100&severity=medium` retrieves persisted alerts.
+- Evaluation records and alert upserts are transactional and appended to the existing audit chain.
+- Identical rule/subject/time-bucket findings use stable SHA-256 fingerprints to avoid duplicate alert records on repeated evaluation.
+
+### Deferred intentionally
+
+No statistical anomaly scoring, adaptive thresholds, ML model, automatic blocking, containment, or autonomous response. These require representative reviewed datasets, labelled outcomes where possible, measured false-positive rates, model governance, and human approval.
+
+### Exit criteria
+
+- Positive, negative, threshold-boundary, and deterministic-repeat tests for every rule.
+- Persistence, idempotent upsert, API authentication, input bounds, and audit-chain tests.
+- CI green on Python 3.11, 3.12, and 3.13 plus dependency audit.
+- Rule-by-rule review of evidence quality, false-positive limitations, and operator runbooks.
+- No changes to the existing active measurement safety envelope.
+- Independent review before treating the engine as operationally trusted.
+
+## v0.4.1 — Alert Lifecycle and Investigation Foundation
+
+**Goal:** make each detection alert an auditable, reviewable investigation record.
+
+Implemented candidate scope:
+- Alert statuses: new, acknowledged, investigating, resolved, with controlled reopening.
+- Analyst classifications: true positive, false positive, benign, undetermined.
+- Alert detail with bounded evidence and chronological activity.
+- Investigation notes (maximum 2,000 characters).
+- Status/classification filters and explicit transition validation.
+- Transactional SQLite activity persistence and hash-linked audit events.
+- Schema migration for existing detection alert databases.
+
+**Exit criteria:** lifecycle/API tests, migration tests, authentication and invalid-transition tests, audit-chain verification, and green CI across supported Python versions.
 
 ## v0.5.0 — Defense Validation and Incident Response
 

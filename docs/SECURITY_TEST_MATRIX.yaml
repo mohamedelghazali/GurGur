@@ -99,3 +99,37 @@ unverified_gates:
   - Independent application security review
   - Multi-host database/lock coordination (unsupported)
   - Production deployment readiness
+
+detection_test_scenarios:
+  - id: DET-001-rule-catalog
+    scenario: every_rule_exposes_version_threshold_severity_and_rationale
+    tests: [tests/test_detection.py::test_rule_catalog_is_versioned_and_explainable]
+  - id: DET-002-port-diversity
+    scenario: exact_20_port_threshold_and_negative_boundary
+    tests:
+      - tests/test_detection.py::test_port_diversity_threshold_is_exact_and_deterministic
+      - tests/test_detection.py::test_port_diversity_below_threshold_does_not_alert
+  - id: DET-003-destination-fanout
+    scenario: exact_30_destination_threshold
+    tests: [tests/test_detection.py::test_destination_fanout_threshold]
+  - id: DET-004-dns-anomalies
+    scenario: nxdomain_burst_and_query_name_diversity
+    tests: [tests/test_detection.py::test_dns_nxdomain_and_name_diversity_rules]
+  - id: DET-005-suricata-alerts
+    scenario: sensor_severity_mapping_and_evidence_preservation
+    tests: [tests/test_detection.py::test_suricata_alert_severity_and_evidence_are_preserved]
+  - id: DET-006-api-persistence
+    scenario: authenticated_evaluation_persists_deterministic_alerts_and_audit
+    tests: [tests/test_detection_api.py::test_detection_evaluation_persists_deterministic_alerts_and_audit]
+
+v0_4_verification_snapshot:
+  commit: "3a6957cea2df746c872a95818a86654006d725b1"
+  workflow_run: "46146000510"
+  python_matrix:
+    "3.11": {tests_passed: 69, tests_failed: 0, application_line_coverage_percent: 80}
+    "3.12": {tests_passed: 69, tests_failed: 0, application_line_coverage_percent: 80}
+    "3.13": {tests_passed: 69, tests_failed: 0, application_line_coverage_percent: 80}
+  dependency_audit: PASS
+  warning: "StarletteDeprecationWarning: using httpx with starlette.testclient is deprecated; install httpx2 instead."
+  docker_compose_validation: NOT_VERIFIED
+  independent_security_review: NOT_VERIFIED

@@ -287,4 +287,30 @@ These are upstream documentation references for future implementation; their inc
 
 ## Telemetry ingestion (v0.3 development)
 
-The local API accepts operator-supplied Zeek TSV, Suricata EVE JSON Lines, and offline Ethernet PCAP/PCAPNG files. Adapters normalize metadata into schema version 1 events and persist immutable import batches plus event records in SQLite. A source SHA-256 digest makes repeat uploads idempotent; batch creation is included in the existing audit hash chain. The PCAP parser is a passive offline file parser: it opens no network sockets, transmits no packets, and omits packet payloads. Current limits are 16 MiB / 10,000 records for text and 64 MiB / 100,000 packets for captures. No live sensor control or detection engine is included.
+The local API accepts operator-supplied Zeek TSV, Suricata EVE JSON Lines, and offline Ethernet PCAP/PCAPNG files. Adapters normalize metadata into schema version 1 events and persist immutable import batches plus event records in SQLite. A source SHA-256 digest makes repeat uploads idempotent; batch creation is included in the existing audit hash chain. The PCAP parser is a passive offline file parser: it opens no network sockets, transmits no packets, and omits packet payloads. Current limits are 16 MiB / 10,000 records for text and 64 MiB / 100,000 packets for captures. No live sensor control is included. The v0.4 rule engine evaluates persisted normalized events; details follow.
+
+
+## Explainable rule-based detection (v0.4 development)
+
+The detection path is deliberately separate from ingestion and active measurement:
+
+1. An operator imports authorized telemetry through the v0.3 adapters.
+2. The operator explicitly calls the authenticated detection evaluation endpoint.
+3. The Store selects at most 5,000 newest persisted events and returns that slice in chronological ingestion order.
+4. The pure rule evaluator applies a versioned, read-only ruleset with fixed UTC-aligned windows.
+5. Findings receive stable SHA-256 fingerprints and bounded evidence.
+6. One SQLite transaction records the evaluation, upserts alerts by fingerprint, and appends an audit-chain event.
+
+The current ruleset contains Suricata alert preservation, destination-port diversity, destination-address fan-out, DNS NXDOMAIN bursts, and DNS query-name diversity. Each rule declares its threshold, severity, source support, explanation, and rationale. A finding is a triage signal, not a verdict.
+
+API:
+- `GET /api/v1/detection/rules`
+- `POST /api/v1/detection/evaluate?limit=5000`
+- `GET /api/v1/detection/alerts`
+
+The ruleset is read-only in this milestone. No user-supplied rule expressions or dynamic execution are supported. No model inference, live capture, sensor control, packet transmission, or automatic response is part of this component.
+
+
+## Alert investigation lifecycle (v0.4.1)
+
+Persisted detection alerts are managed independently from immutable telemetry batches. An alert fingerprint remains the deduplication key; repeated evaluation refreshes detection evidence without resetting operator lifecycle status or classification. The investigation layer stores a bounded activity timeline, including status/classification changes and operator notes. State changes, notes, and their audit-chain records are committed transactionally. The API exposes alert detail, filtered lists, controlled state transitions, and note creation. The current shared API key provides authentication but not per-human identity or RBAC.
