@@ -223,7 +223,7 @@ python -m compileall -q app tests
 python -m pytest -q --cov=app --cov-report=term-missing
 ```
 
-The v0.4 development candidate is undergoing CI verification. See [the v0.4 verification report](docs/VERIFICATION_REPORT_0.4.0_DEV.md) for exact status; no test, coverage, or security result is claimed until it is observed on the candidate commit.
+The v0.4 candidate passed GitHub Actions on commit `3a6957cea2df746c872a95818a86654006d725b1`: **69 tests passed on each of Python 3.11, 3.12, and 3.13, with 80% application line coverage**; the dependency vulnerability audit also passed. One Starlette/httpx deprecation warning remains. See [the v0.4 verification report](docs/VERIFICATION_REPORT_0.4.0_DEV.md).
 
 This development iteration is self-contained within ZYRAX. It does not require external governance repositories or policy frameworks to build or run. A test pass is evidence for the tests actually executed, not a comprehensive security audit or production-readiness certification.
 
