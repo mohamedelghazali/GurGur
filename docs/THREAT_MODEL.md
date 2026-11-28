@@ -1,6 +1,6 @@
-# ZYRAX — Threat Model (0.2.0.dev0)
+# ZYRAX — Threat Model (0.4.0.dev0)
 
-**Scope:** Local-first, single-operator network measurement and defense-research service.  
+**Scope:** Local-first, single-operator network measurement, telemetry ingestion, and explainable detection research service.  
 **Status:** Development candidate; this document is not a production security certification.
 
 ## 1. Purpose and security boundary

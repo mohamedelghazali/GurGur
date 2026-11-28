@@ -3,6 +3,7 @@
 **Scope:** deterministic, explainable rule-based detection over normalized telemetry persisted by v0.3.  
 **Branch:** `feat/v0.4-explainable-detection`  
 **Application code commit verified:** `3a6957cea2df746c872a95818a86654006d725b1`  
+**Final documentation commit:** `8278b1968688446681b86b0384280d8f314a3f98`  
 **Ruleset:** `1.0.0`
 
 ## Implemented candidate
@@ -20,7 +21,8 @@
 
 ## GitHub Actions verification
 
-**Workflow run:** [46146000510](https://github.com/mohamedelghazali/ZYRAX/actions/runs/46146000510)  
+**Application code verification:** [46146000510](https://github.com/mohamedelghazali/ZYRAX/actions/runs/46146000510)  
+**Final PR-head verification:** [46146094070](https://github.com/mohamedelghazali/ZYRAX/actions/runs/46146094070)  
 **Result:** all four jobs passed.
 
 | Environment | Tests | Failures | Application line coverage |
