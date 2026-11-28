@@ -8,7 +8,7 @@
 *Engineered to See. Built to Defend.*
 
 **Network Intelligence & Defense Platform**  
-**Development version:** `0.4.0.dev0` — Explainable Rule-Based Detection Engine candidate  
+**Development version:** `0.4.1.dev0` — Alert Lifecycle & Investigation candidate  
 **Latest baseline:** `0.1.0` — local-first MVP
 
 ZYRAX is a local-first network intelligence, detection, measurement, and defense-research console for authorized private lab environments. It combines a FastAPI control plane, bounded asynchronous HTTP measurements, SQLite persistence, a tamper-evident audit trail, a browser dashboard, and Prometheus-format metrics.
@@ -79,7 +79,7 @@ ZYRAX intentionally contains no public-target mode, arbitrary request method/pat
 - Optional detached HMAC-SHA256 audit checkpoints using a dedicated key separate from the API key.
 - Backward-compatible opening and migration of 0.1 database files.
 
-The current application includes Zeek, Suricata EVE JSON, and offline PCAP/PCAPNG metadata ingestion. It does not yet include a detection engine, behavioral baselines, incident management, or forensic acquisition.
+The current application includes Zeek, Suricata EVE JSON, and offline PCAP/PCAPNG metadata ingestion, deterministic rule-based detection, and an auditable alert investigation lifecycle. Multi-user RBAC, behavioral baselines, ML, and forensic acquisition remain outside this increment.
 
 ## Requirements
 
@@ -191,7 +191,7 @@ docker compose up --build
 
 The supplied Compose mapping publishes `8000` on host loopback only (`127.0.0.1:8000`). Docker is not required for local development. Docker build and Compose validation must be performed on the target host before relying on this path.
 
-## API surface
+## Alert investigation (v0.4.1 development)\n\nAlerts move through `new`, `acknowledged`, `investigating`, and `resolved`; resolved alerts can be reopened. Classification values are `true_positive`, `false_positive`, `benign`, and `undetermined`. Detail responses include bounded detection evidence and the investigation activity timeline. Notes are limited to 2,000 characters. State changes and notes are committed transactionally with hash-linked audit events. The current shared API key does not provide per-human identity or RBAC.\n\n## API surface
 
 All `/api/*` routes and `/metrics` require `Authorization: Bearer <LAB_API_KEY>`.
 
