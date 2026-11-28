@@ -36,9 +36,9 @@
 
 ## Verification status
 
-- GitHub Actions on code commit 708a1b123397f35d9c2d566f816944cfa1e8d210: **57 passed on each of Python 3.11, 3.12, and 3.13; 78% application line coverage**.
-- Dependency vulnerability audit on that same code commit: **PASS**.
-- A follow-up metadata-only commit sets the package version to 0.3.0.dev0; a fresh CI run for that final branch head is still required.
+- GitHub Actions on package metadata commit 1b7b58fce6027cae6ba627dfbd4565e88c00b4e4 (the same application code merged by this PR): **57 passed on each of Python 3.11, 3.12, and 3.13; 78% application line coverage**.
+- Dependency vulnerability audit on that same commit: **PASS**.
+- The final documentation-only update does not change application code. Post-merge CI on the squash commit remains a separate confirmation.
 - Docker / Compose validation: **NOT VERIFIED**.
 - Live sensor interoperability: **NOT IN SCOPE**.
 - Production readiness: **NOT CLAIMED**.
