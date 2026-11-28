@@ -198,7 +198,10 @@ All `/api/*` routes and `/metrics` require `Authorization: Bearer <LAB_API_KEY>`
 | Method | Endpoint | Purpose |
 |---|---|---|
 | GET | `/health` | Minimal process health |
-| GET | `/api/v1/detection/rules` | List versioned explainable detection rules |\n| POST | `/api/v1/detection/evaluate` | Evaluate the latest bounded telemetry slice |\n| GET | `/api/v1/detection/alerts` | List persisted detection alerts |\n| GET | `/api/v1/targets` | List registered targets |
+| GET | `/api/v1/detection/rules` | List versioned explainable detection rules |
+| POST | `/api/v1/detection/evaluate` | Evaluate the latest bounded telemetry slice |
+| GET | `/api/v1/detection/alerts` | List persisted detection alerts |
+| GET | `/api/v1/targets` | List registered targets |
 | POST | `/api/v1/targets` | Register a private target |
 | POST | `/api/v1/runs` | Atomically claim and start a bounded measurement |
 | GET | `/api/v1/runs` | Recent run history |

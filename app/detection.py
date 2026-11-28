@@ -169,7 +169,11 @@ def evaluate_events(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 source, subject, (epoch // 60) * 60, 1, evidence,
                 extra=f"{signature}|{fields.get('signature_id')}",
             )
-            findings[item["fingerprint"]] = item
+            existing = findings.get(item["fingerprint"])
+            if existing:
+                existing["event_count"] += 1
+            else:
+                findings[item["fingerprint"]] = item
 
         if event_type in {"connection", "packet_metadata"}:
             src = fields.get("src_ip")
