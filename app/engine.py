@@ -59,7 +59,8 @@ class BoundedTrafficEngine:
                 raise RuntimeError("A measurement run is active in another GurGur worker.")
             owner_token = uuid4().hex
             try:
-                self.store.recover_abandoned_runs()\n                self.store.claim_run(run, owner_token)
+                self.store.recover_abandoned_runs()
+                self.store.claim_run(run, owner_token)
             except Exception:
                 self._run_file_lock.release()
                 raise
