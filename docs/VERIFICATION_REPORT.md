@@ -1,6 +1,8 @@
-# GurGur 0.1.0 — Verification Report
+# GurGur 0.1.0 — Historical Verification Snapshot
 
-**Observed test time:** 2026-11-27T21:52:24Z
+**Historical test time:** 2026-11-27T21:52:24Z
+
+> Historical record for the 0.1.0 baseline only. This is not the v0.2 verification report and does not impose an external governance dependency on current GurGur development. Current development and verification are self-contained in this repository.
 **Runtime:** Python 3.13.5 · FastAPI 0.128.2 · httpx 0.28.1 · Pydantic 2.13.5 · Uvicorn 0.48.0 · pytest 9.0.2
 
 ## Results

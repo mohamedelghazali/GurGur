@@ -213,7 +213,7 @@ python -m compileall -q app tests
 python -m pytest -q --cov=app --cov-report=term-missing
 ```
 
-The 0.2 candidate was exercised in an isolated Python 3.11.2 environment: **43 tests passed, 0 failed, 78% application line coverage**. CLI smoke checks passed for API-key generation, online backup, backup verification, signed checkpoint creation/verification, and offline restore. GitHub Actions across Python 3.11/3.12/3.13 and the dependency audit remain separate release gates.
+The 0.2 candidate was exercised in an isolated Python 3.11.2 environment: **44 tests passed, 0 failed, 77% application line coverage**. CLI smoke checks passed for API-key generation, online backup, backup verification, signed checkpoint creation/verification, and offline restore. GitHub Actions across Python 3.11/3.12/3.13 and the dependency audit remain separate release gates.
 
 This development iteration is self-contained within GurGur. It does not require external governance repositories or policy frameworks to build or run. A test pass is evidence for the tests actually executed, not a comprehensive security audit or production-readiness certification.
 

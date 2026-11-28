@@ -64,7 +64,7 @@ Baseline limitation: the active-run lock was process-local; backup/restore and d
 
 ### Candidate verification observed
 
-- Isolated Python 3.11.2 run: **43 tests passed, 0 failed, 78% application line coverage** before the final documentation and permission hardening changes.
+- Isolated Python 3.11.2 run: **44 tests passed, 0 failed, 77% application line coverage** on candidate commit `67254209572c320968a69db52c64b041b5769701`.
 - CLI smoke checks passed for key generation, backup, backup verification, checkpoint creation/verification, and offline restore.
 - GitHub Actions Python 3.11/3.12/3.13 and dependency audit remain release gates.
 - Docker/Compose validation and independent security review remain NOT VERIFIED.

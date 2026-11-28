@@ -1,7 +1,23 @@
 version: 2
 project: gurgur
 baseline: "0.2.0.dev0"
-status_note: "Observed results are from the candidate branch and local Python 3.11.2 test environment. CI matrix and independent review remain pending."
+verification_snapshot:
+  commit: "67254209572c320968a69db52c64b041b5769701"
+  python: "3.11.2"
+  compileall: PASS
+  test_command: "python -m pytest -q --cov=app --cov-report=term-missing"
+  tests_passed: 44
+  tests_failed: 0
+  tests_skipped: 0
+  application_line_coverage_percent: 77
+  cli_smoke: PASS
+  cli_checks: [keygen, backup_create, backup_verify, audit_checkpoint, audit_checkpoint_verify, offline_restore, post_restore_backup_verify]
+  filesystem_permissions_observed: {database: "0600", data_directory: "0700"}
+  warning: "StarletteDeprecationWarning: httpx usage with starlette.testclient is deprecated."
+  github_actions_matrix: PENDING
+  dependency_audit: PENDING
+  docker_compose_validation: NOT_RUN
+status_note: "Project-local verification only. Candidate commit 67254209572c320968a69db52c64b041b5769701. External governance repositories and frameworks are not required for development or verification."
 scenarios:
   - id: NET-001-target-scope
     scenario: reject_public_dns_ipv6_link_local_and_out_of-scope_targets
