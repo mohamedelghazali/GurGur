@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class TargetCreate(BaseModel):
@@ -25,3 +26,15 @@ class RunCreate(BaseModel):
 class StopResponse(BaseModel):
     run_id: str
     status: Literal["stopping", "already_finished"]
+
+
+class AuditCheckpoint(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    version: Literal[1]
+    algorithm: Literal["HMAC-SHA256"]
+    key_id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+    created_at: str = Field(min_length=20, max_length=40)
+    event_count: int = Field(ge=0)
+    head_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    signature: str = Field(pattern=r"^[0-9a-f]{64}$")

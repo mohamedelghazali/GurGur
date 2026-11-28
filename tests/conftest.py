@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 TEST_KEY = "test-only-gurgur-key-0123456789abcdef"
+TEST_AUDIT_KEY = "test-only-audit-signing-key-0123456789abcdef"
 os.environ.setdefault("LAB_API_KEY", TEST_KEY)
 os.environ.setdefault("LAB_DATABASE_PATH", "/tmp/gurgur-test-import.sqlite3")
 
@@ -16,7 +17,7 @@ from app.main import create_app  # noqa: E402
 
 
 class QuietHandler(BaseHTTPRequestHandler):
-    def do_GET(self):  # noqa: N802
+    def do_GET(self):
         body = b"local-lab-ok"
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
@@ -29,13 +30,11 @@ class QuietHandler(BaseHTTPRequestHandler):
 
 
 @pytest.fixture
-
 def api_key() -> str:
     return TEST_KEY
 
 
 @pytest.fixture
-
 def target_server():
     server = ThreadingHTTPServer(("127.0.0.1", 0), QuietHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -49,9 +48,13 @@ def target_server():
 
 
 @pytest.fixture
-
 def client(tmp_path, api_key):
-    settings = Settings(api_key=api_key, database_path=tmp_path / "gurgur.sqlite3")
+    settings = Settings(
+        api_key=api_key,
+        database_path=tmp_path / "gurgur.sqlite3",
+        audit_signing_key=TEST_AUDIT_KEY,
+        audit_signing_key_id="test-v1",
+    )
     application = create_app(settings)
     with TestClient(application) as test_client:
         yield test_client
