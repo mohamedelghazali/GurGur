@@ -1,4 +1,4 @@
-# ZYRAX Explainable Detection Engine — v0.4.0.dev0
+# ZYRAX Detection & Alert Investigation — v0.4.1.dev0
 
 ## Design
 
@@ -35,9 +35,18 @@ All endpoints require the existing Bearer API key.
 - `GET /api/v1/detection/rules` — read-only rules catalogue.
 - `POST /api/v1/detection/evaluate?limit=5000` — explicitly evaluate the newest 1–5,000 stored events.
 - `GET /api/v1/detection/alerts?limit=100` — list persisted alerts.
-- `GET /api/v1/detection/alerts?severity=medium` — filter by severity.
+- `GET /api/v1/detection/alerts?severity=medium&status=new` — filter by severity and lifecycle.
+- `GET /api/v1/detection/alerts/{alert_id}` — alert evidence and investigation activity.
+- `PATCH /api/v1/detection/alerts/{alert_id}` — update status and classification.
+- `POST /api/v1/detection/alerts/{alert_id}/notes` — append an investigation note.
 
-Evaluation is operator-triggered; importing telemetry does not automatically trigger detection. Each evaluation and alert persistence transaction is recorded in the existing audit chain.
+### Lifecycle
+
+Statuses: `new → acknowledged → investigating → resolved`. A resolved alert may be reopened to `new`. The API rejects unsupported transitions. Classifications are `true_positive`, `false_positive`, `benign`, and `undetermined`.
+
+Every status/classification change and note is stored in the SQLite activity timeline and appended to the existing hash-linked audit chain in the same transaction. Notes are limited to 2,000 characters. The current single-operator API key does not identify individual humans; activity therefore records the authenticated operator context without claiming a distinct user identity.
+
+Evaluation remains operator-triggered; importing telemetry does not automatically trigger detection. Re-evaluation updates an existing fingerprint without resetting its investigation status or classification.
 
 ## Interpretation and limitations
 
