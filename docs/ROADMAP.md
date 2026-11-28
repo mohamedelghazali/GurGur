@@ -1,7 +1,7 @@
 # ZYRAX — Product Roadmap
 
 **Latest stable baseline:** `0.1.0`  
-**Current development line:** `0.2.0.dev0` — Core Hardening  
+**Current development line:** `0.3.0.dev0` — Network Telemetry & Sensor Ingestion  
 **Status:** v0.2 implementation is in the development branch; release qualification is pending.
 
 ## Product objective
@@ -81,24 +81,13 @@ Baseline limitation: the active-run lock was process-local; backup/restore and d
 
 ## v0.3.0 — Network Telemetry and Sensor Ingestion
 
-**Goal:** accept defensive network observations without adding distributed traffic-generation capability.
+**Implemented development scope:** authenticated file ingestion for Zeek TSV (`conn`, `dns`, `http`), Suricata EVE JSON Lines (`alert`, `flow`, `dns`, `http`, `tls`), and offline Ethernet PCAP/PCAPNG metadata extraction. Events use a versioned envelope, are persisted in SQLite with source digest and audit provenance, and identical source bytes are idempotent.
 
-Planned adapters:
+**Hard limits:** text imports 16 MiB / 10,000 events; PCAP imports 64 MiB / 100,000 packets. Packet parsing is offline and header-only; no sockets are opened and no captured packet is transmitted. Payload content is not retained. Only Ethernet link type is supported for PCAP/PCAPNG.
 
-- Zeek structured logs, initially `conn.log`, `dns.log`, and `http.log`.
-- Suricata EVE JSON alerts and protocol metadata.
-- Reverse-proxy and selected application access/error logs.
-- Explicitly supplied PCAP files processed offline.
+**Still deferred:** live sensor agents, Zeek/Suricata process management, reverse-proxy adapters, event retention/deletion controls, ingestion queue/back-pressure, dashboard visualization, and detection rules. These require separate design and testing.
 
-Planned platform work:
-
-- Versioned normalized event envelope and source provenance.
-- Schema validation, bounded ingestion, deduplication, replay, and back-pressure.
-- Sensor registration, health/heartbeat, last-seen time, ingestion lag, and error counters.
-- Event retention, access control, privacy review, and deletion procedures.
-- Offline fixtures and integration tests for supported source formats.
-
-**Exit criteria:** every adapter has positive/negative fixtures; malformed and oversized records are safely rejected; replay is deterministic; duplicate handling is verified; sensor health and ingestion failures are observable.
+**Exit criteria:** positive/negative fixtures for every adapter; malformed and oversized input rejection; deterministic offline parsing; duplicate batch idempotency; audit-chain continuity; CI and dependency audit green.
 
 ## v0.4.0 — Explainable Detection Engine
 

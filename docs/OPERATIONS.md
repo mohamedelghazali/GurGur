@@ -1,4 +1,4 @@
-# ZYRAX — Operations Runbook (0.2.0.dev0)
+# ZYRAX — Operations Runbook (0.3.0.dev0)
 
 This runbook covers only the current local single-operator profile.
 
@@ -132,3 +132,21 @@ HMAC-SHA256 is symmetric. The verifier needs the same secret and any holder can 
 - No public targets, unrestricted stress tests, packet crafting, spoofing, proxy rotation, reflection, amplification, or distributed traffic-generation agents.
 
 Do not raise any traffic ceiling to make a test or demonstration pass.
+
+
+## 10. Offline telemetry import
+
+All ingestion endpoints require the existing Bearer API key. They accept raw request bodies and do not accept local filesystem paths.
+
+```powershell
+# Zeek conn.log (text)
+curl.exe -k -X POST "http://127.0.0.1:8000/api/v1/telemetry/zeek?log_type=conn" -H "Authorization: Bearer $env:LAB_API_KEY" -H "Content-Type: text/plain" --data-binary "@conn.log"
+# Suricata eve.json (JSON Lines)
+curl.exe -X POST http://127.0.0.1:8000/api/v1/telemetry/suricata -H "Authorization: Bearer $env:LAB_API_KEY" -H "Content-Type: application/x-ndjson" --data-binary "@eve.json"
+# Offline PCAP/PCAPNG
+curl.exe -X POST http://127.0.0.1:8000/api/v1/telemetry/pcap -H "Authorization: Bearer $env:LAB_API_KEY" -H "Content-Type: application/vnd.tcpdump.pcap" --data-binary "@capture.pcap"
+# Review imported events
+curl.exe http://127.0.0.1:8000/api/v1/telemetry/events?limit=100 -H "Authorization: Bearer $env:LAB_API_KEY"
+```
+
+Supported Zeek log_type values are `conn`, `dns`, and `http`. Text imports are limited to 16 MiB and 10,000 events. PCAP/PCAPNG is limited to 64 MiB and 100,000 packets and currently supports Ethernet link type only. The parser extracts packet headers/flow metadata and never transmits captured traffic. Payloads are not stored. Identical file bytes are deduplicated by source SHA-256. Imported IP/DNS/host/SNI metadata can be sensitive; protect the database and define retention before operational use.
