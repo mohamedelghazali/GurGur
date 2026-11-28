@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gurgur"
-version = "0.1.0"
+version = "0.2.0.dev0"
 description = "GurGur: bounded private-network traffic measurement and DDoS defense research lab"
 requires-python = ">=3.11,<3.14"
 dependencies = [

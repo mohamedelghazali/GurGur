@@ -22,6 +22,10 @@ class InterProcessRunLock:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         handle = self.path.open("a+b")
         try:
+            os.chmod(self.path, 0o600)
+        except OSError:
+            pass
+        try:
             handle.seek(0, os.SEEK_END)
             if handle.tell() == 0:
                 handle.write(b"\0")

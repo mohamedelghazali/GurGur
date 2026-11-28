@@ -1,69 +1,91 @@
 # GurGur — Product Roadmap
 
-**Current release:** `0.1.0` — local-first MVP  
-**Next planned release:** `0.2.0` — Core Hardening  
-**Roadmap status:** Planned work, not a statement of implemented functionality or a delivery-date commitment.
+**Latest stable baseline:** `0.1.0`  
+**Current development line:** `0.2.0.dev0` — Core Hardening  
+**Status:** v0.2 implementation is in the development branch; release qualification is pending.
 
 ## Product objective
 
 Evolve GurGur from a bounded private-network measurement console into an explainable network intelligence, threat detection, defense validation, and investigation platform for authorized environments.
 
-The roadmap deliberately prioritizes safety, durable state, evidence integrity, and operational reliability before adding telemetry volume or detection complexity.
+The sequence is deliberate: harden the local control plane before adding telemetry volume, detection complexity, sensors, or additional operators.
 
-## Current baseline — v0.1.0 (implemented)
+## v0.1.0 — Local-first MVP
 
-- FastAPI local control plane and browser dashboard.
-- Single bearer API key for a local operator.
-- SQLite storage for targets, runs, and hash-linked audit events.
-- Bounded asynchronous HTTP measurement against registered loopback/RFC1918 IPv4 literals.
-- Fixed `GET /` request profile, disabled redirects, and ignored proxy environment.
-- Prometheus-format metrics endpoint.
+Implemented baseline:
 
-**Known boundaries:** no multi-user identity/RBAC, no remote deployment profile, no Zeek/Suricata ingestion, no packet capture or flow ingestion, no detection engine, no incident case management, and no forensic acquisition workflow. The process-local active-run lock does not coordinate multiple application workers. The local audit chain has no independent external trust anchor.
+- FastAPI control plane and browser dashboard.
+- Single shared Bearer API key.
+- SQLite target, run, and hash-linked audit storage.
+- Bounded asynchronous HTTP measurement.
+- Literal loopback/RFC1918 IPv4 target validation.
+- Fixed `GET /` profile, disabled redirects, ignored proxy environment.
+- Prometheus-format metrics and loopback-only launch profile.
 
-## v0.2.0 — Core Hardening (next)
+Baseline limitation: the active-run lock was process-local; backup/restore and detached audit checkpoints were not provided.
 
-**Goal:** make the existing local service safer to operate and more reliable without widening its traffic-generation capability.
+## v0.2.0 — Core Hardening
 
-Planned work:
+**Goal:** make the existing local service consistent across same-host workers, recover safely after process exit, and provide operator-controlled recovery and detached audit evidence without widening measurement capability.
 
-1. **Durable run coordination**
-   - Replace process-local-only exclusivity with a database-backed atomic run claim/lease.
-   - Persist the owner identity and lease lifecycle; prevent a second worker from starting a run while a valid lease exists.
-   - Define stale-lease recovery after a process crash and prove it with multi-process tests.
-   - Keep one active run as the supported behavior.
+### Implemented in the candidate
 
-2. **Authentication and authorization hardening**
-   - Keep the single-operator profile for this milestone.
-   - Add a documented API-key rotation/revocation procedure and avoid credential disclosure in logs, errors, metrics, and evidence.
-   - Keep constant-time credential comparison and server-side authorization for every protected route.
-   - Defer multi-user accounts, RBAC, and SSO to the enterprise milestone.
+1. **Same-host run coordination**
+   - Non-blocking OS lock file shared by workers using the same local database.
+   - Singleton `run_control` row in SQLite and transactional run claim.
+   - Run creation and audit append in one transaction.
+   - Persisted stop flag for cross-worker stop requests.
+   - Stale run recovery only after the OS lock is acquired.
+   - Run-progress snapshots persisted for cross-worker reads.
 
-3. **Audit integrity**
-   - Specify a detached, externally verifiable signed-checkpoint design using a vetted signing implementation and keys held outside the application database.
-   - Include key identification, rotation/revocation, checkpoint verification, and recovery behavior.
-   - Do not implement custom cryptographic primitives or present an internal hash chain as an external signature.
+2. **API-key lifecycle**
+   - `python -m app keygen` generates a high-entropy Bearer key.
+   - Rotation uses protected `LAB_API_KEY` configuration and a restart of all workers.
+   - The key remains in process memory and is not stored in SQLite.
+   - Multi-key management and user/RBAC remain out of scope.
 
-4. **Backup, restore, and retention**
-   - Provide a consistent SQLite backup procedure that accounts for WAL mode.
-   - Define backup integrity checks, retention, secure storage, and restore steps.
-   - Execute an isolated restore drill and validate application-level data integrity before calling the procedure verified.
+3. **Detached audit checkpoints**
+   - HMAC-SHA256 checkpoints record a verified chain prefix, event count, timestamp, key ID, and MAC.
+   - Checkpoint files can be stored outside the database.
+   - The key is separate from the API key and remains with the operator.
+   - HMAC is symmetric; it is not an asymmetric signature or non-repudiation mechanism.
 
-5. **Operations and quality**
-   - Document service indicators and initial latency objectives.
-   - Improve sanitized structured operational/security logging and privacy-safe event fields.
-   - Add regression and negative-security tests for run exclusivity, stale leases, authentication, access boundaries, audit verification, backup/restore, and error handling.
-   - Keep CI dependency auditing and multi-version Python tests enabled.
+4. **SQLite backup and restore**
+   - Online consistent backup through SQLite's backup API.
+   - SHA-256 sidecar, SQLite integrity check, and foreign-key check.
+   - Restore requires `--confirm-offline`, validates the source, and creates a pre-restore backup if a destination exists.
+   - 0.1 schema backups are accepted and migrated by the 0.2 Store on open.
 
-**Exit criteria:** no duplicate active run can be created across supported workers; restart/crash behavior is documented and tested; backup restoration is proven in isolation; audit-checkpoint limitations are explicit; applicable security tests and dependency scans are recorded against the release commit. Human security review remains required for authentication and signed-checkpoint design.
+5. **Regression and negative tests**
+   - Cross-process lock exclusivity and kernel lock release after owner termination.
+   - Two app instances sharing a database, second-run rejection, and cross-worker stop.
+   - Stale-run recovery and atomic claim.
+   - Backup integrity, restore, legacy migration, HMAC checkpoint, and tamper tests.
+
+### Candidate verification observed
+
+- Isolated Python 3.11.2 run: **43 tests passed, 0 failed, 78% application line coverage** before the final documentation and permission hardening changes.
+- CLI smoke checks passed for key generation, backup, backup verification, checkpoint creation/verification, and offline restore.
+- GitHub Actions Python 3.11/3.12/3.13 and dependency audit remain release gates.
+- Docker/Compose validation and independent security review remain NOT VERIFIED.
+
+### v0.2 release gates
+
+- Re-run compileall and the full test suite after the final candidate commit.
+- Obtain green GitHub Actions tests for Python 3.11, 3.12, and 3.13.
+- Obtain a green dependency vulnerability audit.
+- Verify the diff contains no safety-envelope changes.
+- Review local filesystem locking assumptions and offline restore instructions.
+- Record unsupported platform behavior honestly.
+- Do not claim production readiness solely because CI passes.
 
 ## v0.3.0 — Network Telemetry and Sensor Ingestion
 
 **Goal:** accept defensive network observations without adding distributed traffic-generation capability.
 
-Planned source adapters:
+Planned adapters:
 
-- Zeek structured logs, starting with `conn.log`, `dns.log`, and `http.log`.
+- Zeek structured logs, initially `conn.log`, `dns.log`, and `http.log`.
 - Suricata EVE JSON alerts and protocol metadata.
 - Reverse-proxy and selected application access/error logs.
 - Explicitly supplied PCAP files processed offline.
@@ -71,12 +93,12 @@ Planned source adapters:
 Planned platform work:
 
 - Versioned normalized event envelope and source provenance.
-- Schema validation, bounded ingestion, deduplication, replay, and back-pressure behavior.
+- Schema validation, bounded ingestion, deduplication, replay, and back-pressure.
 - Sensor registration, health/heartbeat, last-seen time, ingestion lag, and error counters.
 - Event retention, access control, privacy review, and deletion procedures.
-- Offline fixtures and integration tests for each supported source format.
+- Offline fixtures and integration tests for supported source formats.
 
-**Exit criteria:** each supported adapter has fixture-based positive/negative tests, malformed and oversized records are safely rejected, replay is deterministic, duplicate handling is verified, and sensor health/ingestion failures are observable.
+**Exit criteria:** every adapter has positive/negative fixtures; malformed and oversized records are safely rejected; replay is deterministic; duplicate handling is verified; sensor health and ingestion failures are observable.
 
 ## v0.4.0 — Explainable Detection Engine
 
@@ -84,77 +106,62 @@ Planned platform work:
 
 Planned capabilities:
 
-- Versioned rule definitions with explicit event dependencies, aggregation windows, thresholds, severity, confidence rationale, owner, and runbook.
-- Initial deterministic rules for traffic-rate deviations, latency/error spikes, connection patterns, and DNS anomalies.
-- Per-service or per-network baseline support with bounded time windows.
-- Positive and negative rule fixtures, regression corpus, tuning, and suppression expiry.
-- Evaluation reporting: true/false positives and negatives where labels exist, precision/recall where statistically meaningful, and alert volume.
+- Versioned rules with event dependencies, aggregation windows, thresholds, severity, rationale, owner, and runbook.
+- Deterministic rules for traffic-rate deviations, latency/error spikes, connection patterns, and DNS anomalies.
+- Per-service or per-network baselines with bounded windows.
+- Positive/negative fixtures, regression corpus, tuning, and suppression expiry.
+- Evaluation reporting for false positives and, where labelled data exists, precision/recall.
 
-Statistical anomaly scoring may be added only after reliable telemetry and representative labelled or reviewed data exist. Machine learning is not a substitute for clear detection logic, a tested baseline, or analyst review.
+Statistical anomaly scoring may be added only after reliable telemetry and representative labelled/reviewed data exist. An anomaly score is a triage signal, not proof of malicious intent.
 
-**Exit criteria:** every shipped rule has a tested runbook, measurable false-positive behavior, stable versioning, a documented owner, and a repeatable evaluation report. No rule is treated as proof of malicious attribution.
+**Exit criteria:** each shipped rule has tests, a runbook, measurable false-positive behavior, a stable version, and an accountable owner.
 
 ## v0.5.0 — Defense Validation and Incident Response
 
-**Goal:** connect detection results to safe, human-controlled investigation and defense assessment.
+**Goal:** connect detections to safe, human-controlled investigation and defense assessment.
 
 Planned capabilities:
 
-- Incident cases that correlate detections and source evidence into timelines.
-- Investigation notes, evidence references, action history, and exportable reports.
-- Defense-validation scenarios using offline replay and bounded authorized measurements.
-- Measurements for mean time to detect (MTTD), acknowledge, contain, and recover where the workflow provides reliable timestamps.
-- Runbooks and explicit operator approval for any future response integration.
+- Incident cases correlating detections and evidence into timelines.
+- Investigation notes, evidence references, action history, and reports.
+- Offline replay and bounded authorized defense-validation scenarios.
+- MTTD, acknowledgement, containment, and recovery measurements where timestamps support them.
+- Explicit operator approval for any future response integration.
 - Recovery verification and post-incident review.
 
-**Exit criteria:** incident lifecycle is auditable; reports preserve provenance and evidence hashes; no disruptive action can execute without explicit operator approval; every scenario has defined success criteria and safe teardown/recovery.
+**Exit criteria:** incident lifecycle is auditable; reports preserve provenance and evidence hashes; no disruptive action executes without operator approval; scenarios have safe teardown and recovery criteria.
 
 ## v1.0.0 — Multi-Operator / Enterprise Research Platform
 
-**Goal:** support controlled deployment beyond a single local operator only after the prior gates are met.
-
-Potential scope:
+Potential scope after prior gates:
 
 - Multi-user identity, RBAC, ownership boundaries, and audited administrative actions.
 - PostgreSQL for concurrent control-plane state after migration and recovery testing.
 - HTTPS/TLS and an approved SSO/OIDC integration.
-- Sensor fleet administration for **passive telemetry collection only**.
-- Defined tenant boundaries, data retention, backup/recovery objectives, and operational runbooks.
-- SIEM/IDS/IPS integration through explicit, documented adapters.
+- Passive-only sensor fleet administration.
+- Tenant boundaries, data retention, backup/recovery objectives, and operational runbooks.
+- SIEM/IDS/IPS adapters.
 - Signed release artifacts, SBOM, vulnerability triage, and independent security review.
-- A separate deployment threat model and production readiness assessment.
+- Separate deployment threat model and production readiness assessment.
 
-ClickHouse may be evaluated for high-volume event analytics only when measured ingestion/query patterns justify it. NATS/Kafka should be deferred until a proven queueing, replay, or delivery guarantee cannot be met by a simpler design. A Go/Rust rewrite should be considered only after profiling identifies a real performance constraint.
-
-**Exit criteria:** threat model and privacy review approved; authentication/authorization and tenant-isolation tests pass; operational monitoring and alert delivery are verified; backup restore and rollback drills pass; dependency/supply-chain controls are evidenced; independent security review and human release approval are complete.
+ClickHouse is considered only if measured event volume/query patterns justify it. NATS/Kafka are deferred until a demonstrated delivery/throughput need warrants them. A Go/Rust rewrite is considered only after profiling identifies an actual bottleneck.
 
 ## Cross-release non-negotiable safety requirements
 
-All milestones preserve the current measurement safety envelope:
+- Targets remain literal IPv4 loopback or RFC1918 addresses only; no DNS hostnames or IPv6.
+- Requests remain fixed HTTP `GET /`; no arbitrary methods, paths, payloads, or redirects.
+- Proxy environment remains ignored.
+- Hard ceilings remain 10 requests/second, 30 seconds, 5 concurrent requests, 300 requests per run, existing timeouts, and the 16 KiB response cap.
+- One active run per shared local database and OS lock file; multi-host coordination remains unsupported.
+- No public-target mode, distributed traffic generation, botnet/C2, proxy/VPN rotation, spoofing, packet crafting, reflection, amplification, evasion, or unrestricted stress testing.
+- Prefer offline event/PCAP replay over increasing live traffic.
+- Sensors collect authorized telemetry; they do not generate traffic or autonomously modify protected systems.
+- No automatic disruptive response; require operator approval, scope preview, and rollback planning.
 
-- Targets: literal IPv4 loopback or RFC1918 addresses only; no DNS hostnames or IPv6.
-- Request: fixed HTTP `GET /`; no arbitrary methods, paths, payloads, or redirects.
-- Proxy environment: ignored.
-- Hard ceilings: 10 requests/second, 30 seconds, 5 concurrent requests, 300 requests per run, existing timeouts, and the 16 KiB response cap.
-- One active run remains the supported behavior until durable coordination is proven.
-- No public-target mode, distributed traffic-generation fleet, botnet/C2, proxy/VPN rotation, source spoofing, packet crafting, reflection, amplification, evasion, or unrestricted stress testing.
-- For broader scenario coverage, prefer offline event and PCAP replay over increasing live traffic.
-- Sensor integrations collect authorized telemetry; they do not generate traffic or autonomously modify protected systems.
-- No automatic disruptive response. Operator approval, scope preview, and rollback planning are required for any future response integration.
+A change to a safety invariant requires explicit authorization, a threat-model update, negative tests, and human review. A test or benchmark is never a reason to weaken the boundary.
 
-A change to one of these invariants is not an ordinary feature request. It requires explicit authorization, a revised threat model, negative-security tests, and human security review; a test or benchmark is never a reason to weaken the boundary.
+## Project-local verification evidence
 
-## Governance and release evidence
+For each milestone, record the commit SHA, scope, architecture/threat-model changes, requirement-to-code-to-test traceability, exact runner/version/commands/results, artifact hashes, relevant dependency/secret checks, and unresolved BLOCKED or NOT VERIFIED items.
 
-For every milestone, record:
-
-- Commit SHA and release scope.
-- Architecture and threat-model changes.
-- Applicable GENCODE-GOV and AIGENT-SEC rules.
-- Requirement-to-test traceability for critical and negative-security scenarios.
-- Test runner/version, exact commands, results, timestamps, and artifact hashes.
-- Secret scan, dependency audit, and relevant static/security checks.
-- Performance, observability, backup, recovery, and migration evidence as applicable.
-- Human review and unresolved BLOCKED / NOT VERIFIED items.
-
-Statuses must remain honest: PASS, FAIL, BLOCKED, or NOT VERIFIED. A documentation milestone is not a production release, and a green CI run alone does not establish complete security or production readiness.
+GurGur's development and test process is self-contained. It must not require external governance repositories or policy frameworks. A green CI run alone does not establish complete security or production readiness.

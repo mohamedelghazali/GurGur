@@ -19,35 +19,47 @@ The target platform has five connected capabilities:
 
 The product is a defensive research and validation platform. It is not an Internet-scale traffic generator, botnet controller, or automated disruption tool.
 
-## 2. Current implementation (v0.1.0)
+## 2. Current implementation (0.2.0.dev0 — Core Hardening candidate)
 
-The current release is a local-first, single-operator MVP:
+The current development baseline remains a local-first, single-operator service, with the following implemented capabilities:
 
-- FastAPI control plane with bearer-key authentication.
+- FastAPI control plane with a single shared Bearer API key.
 - Browser dashboard served by the application.
-- SQLite persistence for targets, runs, and hash-linked audit events.
-- Bounded asynchronous HTTP measurement engine.
-- Fixed request profile: HTTP `GET /`, no redirects, and no proxy-environment inheritance.
-- Prometheus-format application metrics.
-- Loopback/RFC1918 IPv4 target validation and server-enforced experiment ceilings.
+- SQLite persistence for targets, runs, persistent run coordination, and hash-linked audit events.
+- Bounded asynchronous HTTP measurement engine with the fixed request profile.
+- OS-level run lock file plus a singleton SQLite `run_control` row. A worker must acquire the same local lock before claiming the single active run.
+- Transactional run creation, completion, stop-request persistence, and related audit records.
+- Cross-worker stop requests: a non-owning worker writes a stop flag that the run owner checks before scheduling the next request.
+- Safe stale-run recovery: startup only recovers queued/running rows after it successfully acquires the OS lock, proving no current worker holds that lock.
+- Online SQLite backup, checksum verification, integrity checking, offline restore, and automatic pre-restore backup.
+- Optional detached HMAC-SHA256 audit checkpoints using a signing secret separate from the API key.
+- Prometheus-format metrics and baseline browser security headers.
+- Loopback/RFC1918 IPv4 target validation and the unchanged server-enforced experiment ceilings.
 
-The current release does **not** include Zeek or Suricata ingestion, packet-capture import, network-flow collection, a detection engine, anomaly models, incident management, forensic acquisition, multi-user RBAC, SSO, or a production remote-access profile.
+The current development baseline still does **not** include Zeek or Suricata ingestion, packet-capture parsing, network-flow collection, a detection engine, anomaly models, incident management, forensic acquisition, multi-user RBAC, SSO, or a production remote-access profile.
 
 ### Current data path
 
 ```text
 Browser dashboard
-       |
        | Bearer-authenticated HTTP
        v
-FastAPI control plane ------> SQLite
-       |
-       v
-Bounded HTTP measurement engine
+FastAPI control plane ---------> SQLite
+       |                          | targets / runs / audit events
+       |                          | singleton run_control
+       v                          |
+Bounded HTTP measurement engine   |
+       |                          |
+       +---- OS run-lock file ----+
        |
        v
 Registered loopback / RFC1918 lab service
+
+Operator CLI:
+  keygen | backup create/verify/restore | audit checkpoint/verify
 ```
+
+The run-lock file is held for the lifetime of a measurement run and is automatically released by the operating system when its owner process exits. The SQLite row records the run owner and state so the next lock owner can recover stale rows. This contract applies only to GurGur workers sharing one local database path and a filesystem that correctly implements the required advisory lock semantics. It is not a distributed lock or a multi-host coordination protocol.
 
 ## 3. Target logical architecture (planned)
 
@@ -170,7 +182,9 @@ The forensic workspace should provide:
 - An append-only custody record for acquisition, access, transfer, export, and review.
 - Exportable investigation reports that preserve timestamps, tool versions, source references, and known limitations.
 
-A hash chain is tamper-evident only relative to the stored chain. It is not proof of authenticity when an administrator can rewrite the complete database and recompute hashes. External signed checkpoints require a separate trusted signer, protected signing keys, key rotation and revocation procedures, and independent verification. Do not invent or implement custom cryptography.
+The hash chain is tamper-evident only relative to the stored chain; an administrator able to rewrite the complete database can recompute it. The 0.2 line adds a detached HMAC-SHA256 checkpoint for a verified chain prefix. The checkpoint records a key ID, timestamp, event count, chain-head hash, algorithm, and MAC, and is written to a file outside the database. Its key is supplied by `LAB_AUDIT_SIGNING_KEY`, which must be protected separately from the database and the API key.
+
+HMAC is symmetric: a verifier needs the shared secret, and any holder of that secret can create a valid checkpoint. It is not an asymmetric public-key signature and does not provide non-repudiation. The current implementation has no HSM integration, public-key verification, or automatic remote anchoring.
 
 ### 4.6 Incident workflow (planned)
 
@@ -214,6 +228,16 @@ Adopt the simplest store that meets measured requirements:
 
 Keep control-plane state (users, configuration, incidents, audit metadata) conceptually separate from high-volume telemetry. Define retention, deletion, backup, restore, access control, and migration behavior before accumulating sensitive event data. Database selection must follow a measured workload and recovery plan, not anticipated scale alone.
 
+### Current backup and recovery behavior
+
+The CLI uses SQLite's online backup API to create a transactionally consistent snapshot while the application is running. Every backup has a SHA-256 sidecar and is verified using the SQLite integrity and foreign-key checks. Backups from the 0.1 schema are accepted; opening a restored file with the 0.2 store applies the new schema migration.
+
+Restore is an offline maintenance operation. The operator must stop every process using the database and pass `--confirm-offline`. Before replacing an existing database, the restore routine creates a timestamped pre-restore backup. The CLI cannot prove that every external process has stopped; the explicit operator confirmation remains a required operational control.
+
+### API-key lifecycle
+
+The application keeps one API key in process memory, loaded from `LAB_API_KEY`. `python -m app keygen` generates a high-entropy replacement. Rotation consists of updating the protected environment and restarting all workers; the old value is then rejected. There is no API endpoint for changing credentials and no multi-key/RBAC model in this milestone.
+
 ## 7. Security and privacy invariants
 
 The following are product boundaries, not tunable performance settings:
@@ -222,7 +246,7 @@ The following are product boundaries, not tunable performance settings:
 - The measurement request remains the fixed HTTP `GET /` profile; no arbitrary path or method.
 - Redirects remain disabled and proxy environment settings remain ignored by the measurement client.
 - Hard limits remain at **10 requests/second, 30 seconds, 5 concurrent requests, and 300 requests per run**, with the existing request-timeout and response-size caps.
-- One active experiment remains the supported behavior; coordination must become durable before multi-worker execution is supported.
+- One active experiment remains the supported behavior. A single active run is coordinated across same-host workers sharing a local SQLite database and its OS run-lock file; multi-host or network-filesystem locking is unsupported.
 - Do not add public-target mode, distributed traffic-generation agents, botnet/C2 behavior, proxy/VPN rotation, source spoofing, packet crafting, reflection, amplification, evasion, or unrestricted stress-generation.
 - Use offline event/PCAP replay for broad detection testing; do not raise active traffic ceilings to make a demonstration or benchmark pass.
 - Sensors are telemetry sources, not remote traffic-generation agents.

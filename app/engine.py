@@ -205,7 +205,7 @@ class BoundedTrafficEngine:
                 follow_redirects=False,
                 trust_env=False,
                 verify=True,
-                headers={"User-Agent": "GurGur/0.2 (+authorized-private-lab)"},
+                headers={"User-Agent": "GurGur/0.2.0-dev (+authorized-private-lab)"},
             ) as client:
                 while counts["started"] < max_requests:
                     if stop_event.is_set() or self.store.is_stop_requested(run_id):

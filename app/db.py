@@ -30,10 +30,14 @@ class Store:
     """SQLite store with transactionally claimed single-run coordination."""
 
     def __init__(self, path: Path):
-        self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path = Path(path).expanduser().resolve()
+        self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         self._mutex = threading.RLock()
         self.conn = sqlite3.connect(self.path, timeout=10.0, check_same_thread=False)
+        try:
+            os.chmod(self.path, 0o600)
+        except OSError:
+            pass
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA busy_timeout=10000")
         self.conn.execute("PRAGMA journal_mode=WAL")
@@ -511,7 +515,10 @@ def verify_backup(backup_path: Path) -> dict[str, Any]:
     sidecar = Path(f"{source}.sha256")
     if not source.is_file() or not sidecar.is_file():
         raise FileNotFoundError("Backup database or its .sha256 sidecar is missing.")
-    expected = sidecar.read_text(encoding="utf-8").split()[0]
+    checksum_parts = sidecar.read_text(encoding="utf-8").split()
+    if not checksum_parts:
+        raise RuntimeError("Backup checksum sidecar is empty.")
+    expected = checksum_parts[0]
     if len(expected) != 64 or any(ch not in "0123456789abcdef" for ch in expected):
         raise RuntimeError("Backup checksum sidecar is malformed.")
     actual = _sha256_file(source)
@@ -551,6 +558,9 @@ def backup_database(source_path: Path, destination_path: Path, overwrite: bool =
         source_connection.backup(backup_connection)
         _integrity_check(backup_connection)
         backup_connection.commit()
+    except Exception:
+        temporary.unlink(missing_ok=True)
+        raise
     finally:
         backup_connection.close()
         source_connection.close()

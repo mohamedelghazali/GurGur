@@ -46,7 +46,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application = FastAPI(
         title="GurGur API",
-        version="0.2.0",
+        version="0.2.0.dev0",
         description="Bounded traffic measurement and defensive telemetry for private lab targets.",
         docs_url=None,
         redoc_url=None,
@@ -86,7 +86,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @application.get("/health", tags=["system"])
     async def health() -> dict[str, str]:
-        return {"status": "ok", "service": "gurgur", "version": "0.2.0"}
+        return {"status": "ok", "service": "gurgur", "version": "0.2.0.dev0"}
 
     @application.get("/", include_in_schema=False)
     async def dashboard():
