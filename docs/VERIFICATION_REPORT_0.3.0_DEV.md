@@ -36,9 +36,9 @@
 
 ## Verification status
 
-- Local test execution: **NOT VERIFIED in this environment**.
-- Python 3.11 / 3.12 / 3.13 GitHub Actions: **PENDING**.
-- Dependency vulnerability audit: **PENDING**.
+- GitHub Actions on code commit 708a1b123397f35d9c2d566f816944cfa1e8d210: **57 passed on each of Python 3.11, 3.12, and 3.13; 78% application line coverage**.
+- Dependency vulnerability audit on that same code commit: **PASS**.
+- A follow-up metadata-only commit sets the package version to 0.3.0.dev0; a fresh CI run for that final branch head is still required.
 - Docker / Compose validation: **NOT VERIFIED**.
 - Live sensor interoperability: **NOT IN SCOPE**.
 - Production readiness: **NOT CLAIMED**.
